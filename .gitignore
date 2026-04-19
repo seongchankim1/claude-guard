@@ -1,0 +1,7 @@
+node_modules
+dist
+.claude-guard
+*.log
+.DS_Store
+coverage
+.vitest-cache

@@ -1,0 +1,23 @@
+id: CG-SQL-001
+title: "SQL string concatenation with a variable"
+severity: CRITICAL
+category: sql
+patterns:
+  - regex: "(SELECT|INSERT|UPDATE|DELETE)[^'\"`]{0,80}['\"`]\\s*\\+\\s*[a-zA-Z_]"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.py"
+      - "**/*.go"
+      - "**/*.rb"
+      - "**/*.java"
+      - "**/*.php"
+context_hint: |
+  Concatenating user-controlled data into a raw SQL string is the canonical
+  injection vector. Use parameterized queries, the ORM's safe API, or a
+  tagged-template builder instead.
+fix_strategy: suggest_only
+poc_template: |
+  # Auth bypass via comment truncation:
+  email=admin'--
+  password=anything

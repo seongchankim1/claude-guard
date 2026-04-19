@@ -1,0 +1,19 @@
+id: CG-XSS-001
+title: "dangerouslySetInnerHTML with a dynamic expression"
+severity: HIGH
+category: xss
+languages: [javascript, typescript]
+patterns:
+  - regex: "dangerouslySetInnerHTML\\s*=\\s*\\{\\s*\\{\\s*__html\\s*:\\s*[a-zA-Z_][a-zA-Z0-9_\\.\\[\\]]*"
+    files:
+      - "**/*.jsx"
+      - "**/*.tsx"
+context_hint: |
+  Passing non-literal HTML to dangerouslySetInnerHTML is XSS unless the
+  string is produced by a trusted sanitizer (for example DOMPurify).
+  Prefer rendering the content as text, or sanitize explicitly with a
+  dependency you trust and keep updated.
+fix_strategy: suggest_only
+poc_template: |
+  # Injection payload in the variable's source:
+  <img src=x onerror=alert(document.cookie)>

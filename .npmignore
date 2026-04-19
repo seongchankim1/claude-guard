@@ -1,0 +1,14 @@
+node_modules
+src
+tests
+examples
+docs
+.github
+.claude-guard
+coverage
+*.test.ts
+tsconfig.json
+vitest.config.ts
+.gitignore
+.npmrc
+.vitest-cache

@@ -1,0 +1,27 @@
+import type { Finding } from "../types.js";
+import { renameEnvVar } from "./rename-env-var.js";
+import { suggestOnly } from "./suggest-only.js";
+
+export type { Finding };
+
+export interface FixApplyResult {
+  finding_id: string;
+  status: "applied" | "suggested" | "skipped" | "failed";
+  detail?: string;
+  reason?: string;
+  touched?: string[];
+}
+
+export async function applyFix(
+  projectPath: string,
+  f: Finding
+): Promise<FixApplyResult> {
+  switch (f.fix_strategy) {
+    case "rename_env_var":
+      return renameEnvVar(projectPath, f);
+    case "suggest_only":
+    case undefined:
+    default:
+      return suggestOnly(projectPath, f);
+  }
+}
