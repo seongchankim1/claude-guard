@@ -8,6 +8,7 @@ import { renderRulesCatalogMd } from "../rules-catalog.js";
 import { findingsToSarif } from "../sarif.js";
 import { renderHtmlReport } from "../html-report.js";
 import { renderJunitXml } from "../junit.js";
+import { installGitHook } from "../install-hooks.js";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, resolve } from "path";
@@ -25,6 +26,7 @@ Usage:
   claude-guard junit [path]          Emit JUnit XML for CI systems that grok it
   claude-guard report [path] [--open]   Write a self-contained HTML report; --open launches the browser
   claude-guard watch [path]          Rescan on file change (debounced)
+  claude-guard install-hooks [path]  Install a pre-commit hook that blocks CRITICAL findings in staged files
   claude-guard explain <id> [path]   Show details for a finding
   claude-guard rules                 List active builtin rules
   claude-guard docs                  Print a markdown catalogue of every active rule
@@ -169,6 +171,17 @@ async function main(argv: string[]): Promise<number> {
     }
     const findings = await loadFindings(projectPath, sid);
     process.stdout.write(renderJunitXml(findings));
+    return 0;
+  }
+
+  if (cmd === "install-hooks") {
+    const projectPath = resolve(rest[0] ?? ".");
+    const r = await installGitHook(projectPath);
+    if (!r.wrote) {
+      process.stderr.write(`claude-guard install-hooks: ${r.reason ?? "no-op"}\n`);
+      return r.path === "" ? 1 : 0;
+    }
+    process.stdout.write(`Installed pre-commit hook at ${r.path}${r.reason ? ` (${r.reason})` : ""}\n`);
     return 0;
   }
 

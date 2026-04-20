@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0 — 2026-04-20
+
+### Added
+- **Parallel L2 scanner**: globs are cached per unique glob set, file reads are cached (so a file is read at most once across all rules), and per-rule I/O runs in batches of 16. Full-suite scan is ~25% faster on the bench repo.
+- **`claude-guard install-hooks`**: installs a `pre-commit` hook that runs `scan --diff=HEAD` and blocks the commit if any CRITICAL finding appears on staged files. Idempotent, and preserves any existing pre-commit hook by chaining.
+- **+10 rules**, for a total of 60: Express state-change routes without CSRF middleware, Mongoose `.find(req.query)` / NoSQL injection, webhook handlers processing `req.body` with no signature check, auth-facing routes (login/signup/forgot/reset) without rate-limit middleware in scope, `target="_blank"` links without `rel="noopener"`, LLM `stream:true` without abort plumbing, secret-like env vars printed via `console.log` / `print`, JWT `expiresIn` over one day, SQLAlchemy `text()` composed via f-string or `.format()`, `github_pat_*` fine-grained PATs in source.
+
+### Changed
+- Rule fixtures now accepted in nested directories under `bad/` and `good/`. The fixture test walks recursively.
+
 ## 0.6.0 — 2026-04-20
 
 ### Added

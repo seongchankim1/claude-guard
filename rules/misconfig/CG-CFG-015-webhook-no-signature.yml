@@ -1,0 +1,16 @@
+id: CG-CFG-015
+title: "Webhook handler processes body without verifying a signature header"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "(stripe|github|shopify|twilio|slack|discord).{0,40}[Ww]ebhook[\\s\\S]{0,400}req\\.body"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  If a webhook endpoint is handled without verifying the provider's
+  signature header (e.g. stripe-signature, x-hub-signature-256), any
+  attacker who learns the URL can forge events. Verify the signature
+  with the shared secret before trusting the payload.
+fix_strategy: suggest_only

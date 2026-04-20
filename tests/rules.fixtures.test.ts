@@ -11,9 +11,15 @@ const fixturesRoot = resolve(here, "../fixtures/rules");
 function listFixtureDir(dir: string): string[] {
   if (!existsSync(dir)) return [];
   const out: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    const p = join(dir, entry);
-    if (statSync(p).isFile()) out.push(p);
+  const stack: string[] = [dir];
+  while (stack.length > 0) {
+    const cur = stack.pop()!;
+    for (const entry of readdirSync(cur)) {
+      const p = join(cur, entry);
+      const s = statSync(p);
+      if (s.isDirectory()) stack.push(p);
+      else if (s.isFile()) out.push(p);
+    }
   }
   return out;
 }

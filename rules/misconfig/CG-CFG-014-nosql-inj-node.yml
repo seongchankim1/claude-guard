@@ -1,0 +1,16 @@
+id: CG-CFG-014
+title: "Mongoose find() argument taken directly from req.body / req.query"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "\\.(find|findOne|updateOne|updateMany|deleteOne|deleteMany)\\s*\\(\\s*(req|request)\\.(body|query|params)\\s*\\)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Passing req.body / req.query straight to a Mongoose query lets an
+  attacker send { $ne: null } to bypass filters or { $where: "..." } to
+  execute JS on the server. Coerce input into a flat whitelist of
+  primitive fields before querying.
+fix_strategy: suggest_only
