@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.3.0 — 2026-04-20
+
+### Added
+- **README demo section** with the actual `scan` + `list` output from running claude-guard against `examples/vulnerable-next-app` — Grade F, 4 CRITICAL, 2 HIGH, real strategies (`parameterize_query`, `rename_env_var`, `split_server_only`).
+- **Comparison table** against Semgrep / Gitleaks / Snyk Code / SonarQube, positioning claude-guard as the specialist for "AI-generated-code mistakes with fix-oriented feedback inside your agent".
+- **FAQ section** answering the six most-asked questions: data handling, rule execution model, red-team guardrails, checkbox UX rationale, tool-replacement question, and rule-authoring workflow.
+- **+10 rules**, bringing the total to 120:
+  - `CG-CFG-039` — cookie `Domain` set to a bare apex
+  - `CG-CFG-040` — Express `trust proxy: true`
+  - `CG-AUTH-018` — `basicAuth({ users: { user: password } })` literal pair
+  - `CG-CFG-041` — cron handler under `app/api/cron` (flagged for manual Bearer check)
+  - `CG-LLM-013` — RAG retrieved doc interpolated into a system-role prompt
+  - `CG-SQL-009` — TypeORM `manager.query()` with template-literal interpolation
+  - `CG-CFG-042` — `sendFile(req.params.*)` without `nosniff`
+  - `CG-SEC-017` — Twilio Account SID + Auth Token literal pair
+  - `CG-XSS-009` — JSX `<a href={expr}>` without a scheme guard
+  - `CG-IAC-010` — Terraform RDS `publicly_accessible = true`
+
 ## 1.2.0 — 2026-04-20
 
 ### Added

@@ -7,7 +7,7 @@
 ![mcp](https://img.shields.io/badge/MCP-stdio-purple)
 
 - One-line install. **Zero API keys. Zero network calls by default. Zero outbound telemetry.**
-- **110 builtin rules** across secrets, SQL/NoSQL injection, XSS, auth, LLM-specific risks, misconfiguration, Docker, and IaC. Detects across **10 languages** via an optional Semgrep adapter.
+- **120 builtin rules** across secrets, SQL/NoSQL injection, XSS, auth, LLM-specific risks, misconfiguration, Docker, and IaC. Detects across **10 languages** via an optional Semgrep adapter.
 - **SARIF 2.1.0 export** — drop findings straight into the GitHub Security tab via `github/codeql-action/upload-sarif`.
 - **Security scorecard.** Every scan produces a 0–100 score and an A+…F grade, rendered at the top of `findings.md` and available as its own MCP tool, CLI command, and shields.io-compatible endpoint badge.
 - **Checkbox-based approval.** `claude-guard` writes a `findings.md` grouped by severity. You toggle `[x]` on the items you want fixed, then run `apply_fixes`. Nothing else is touched.
@@ -85,6 +85,58 @@ jobs:
         with: { sarif_file: claude-guard.sarif, category: claude-guard }
 ```
 
+## See it in action
+
+Run claude-guard against the deliberately-broken Next.js demo app included in this repo:
+
+```bash
+$ npx claude-guard scan ./examples/vulnerable-next-app
+{
+  "scan_id": "8e4c8731-…",
+  "finding_count": 6,
+  "duration_ms": 56,
+  "layers_run": ["l1", "l2"],
+  "summary_by_severity": { "CRITICAL": 4, "HIGH": 2, "MEDIUM": 0, "LOW": 0 },
+  "scorecard": {
+    "score": 4, "grade": "F",
+    "headline": "Grade F — score 4/100 (4 CRITICAL, 2 HIGH)"
+  }
+}
+```
+
+```bash
+$ npx claude-guard list ./examples/vulnerable-next-app | head -20
+# claude-guard findings — scan_id: 8e4c8731-…
+
+> Security scorecard: Grade F — score 4/100 (4 CRITICAL, 2 HIGH)
+
+## CRITICAL (4)
+
+- [ ] CG-SQL-002 `app/api/users/route.ts:7` — Prisma $queryRawUnsafe
+  strategy: parameterize_query
+
+- [ ] CG-SEC-001 `.env.example:1` — NEXT_PUBLIC_* appears to hold a secret
+  strategy: rename_env_var
+
+- [ ] CG-SEC-001 `.env.example:2` — NEXT_PUBLIC_* appears to hold a secret
+  strategy: rename_env_var
+
+- [ ] CG-SEC-003 `lib/supabase.ts:5` — service_role on a client-reachable path
+  strategy: split_server_only
+```
+
+Toggle `[x]` on the findings you want fixed, then run `apply_fixes`:
+
+```
+> Apply the fixes for scan 8e4c8731-… (mode: checked)
+  applied:   ["...CG-SEC-001...", "...CG-SEC-003..."]  # AST rewrites
+  suggested: ["...CG-SQL-002...", "...CG-AUTH-001..."] # inline TODO annotations
+  branch:    claude-guard/fix-8e4c8731
+  diff_path: .claude-guard/rollback/8e4c8731-....patch
+```
+
+claude-guard creates a `claude-guard/fix-<scan_id>` branch, stages the changes, and writes a rollback patch under `.claude-guard/rollback/`. You review, commit (or revert with `claude-guard rollback <id>`), and keep moving.
+
 ## Usage
 
 In any MCP client, in plain language:
@@ -113,18 +165,18 @@ In any MCP client, in plain language:
 
 ## Builtin rules
 
-**110 rules** across eight categories, targeting the failure modes we see most often in AI-generated web code:
+**120 rules** across eight categories, targeting the failure modes we see most often in AI-generated web code:
 
-| category | count | example rules |
+| category | count | representative rules |
 |---|---|---|
-| `secrets` | 9 | `NEXT_PUBLIC_*` secret names, literal API keys, Supabase `service_role` client-side, AWS access keys, private-key PEM, committed `.env`, Slack webhooks, committed GCP service-account JSON, Stripe live keys |
-| `sql` | 5 | SQL string concatenation, Prisma `$queryRawUnsafe` / `$executeRawUnsafe`, Knex `.raw()` interpolation, Python f-string queries, MongoDB `$where` |
-| `xss` | 4 | React `dangerouslySetInnerHTML`, Vue `v-html`, direct `innerHTML` assignment, `href="javascript:…"` sinks |
-| `auth` | 7 | Hardcoded JWT secret, missing cookie flags, low-round bcrypt, MD5/SHA1 password hashing, `jwt.decode` without verify, `Math.random` for tokens, OAuth without `state` |
-| `llm` | 6 | User input in system prompt, `eval` on LLM output, client-side LLM SDK with a visible key, tool params into shell/file IO, LLM output rendered as raw HTML, system prompt in client-reachable module |
-| `misconfig` | 13 | CORS `*`, Supabase RLS off, Firebase `if true`, open redirect, Express without `helmet`, Next.js Server Action with no auth, S3 public ACL, SSRF from request input, cloud-metadata IP fetch, user-driven iframe `src`, missing CSP, path traversal via request input, Django `DEBUG = True` |
+| `secrets` | 16 | `NEXT_PUBLIC_*` secret names, literal OpenAI / Anthropic / AWS / Google / Stripe / GitHub PAT keys, private-key PEM blocks, committed `.env`, Supabase `service_role` on a client-reachable path, GCP service-account JSON, `github_pat_*`, kubeconfig with an embedded token, JWT tokens in source, Mongo URI with inline `user:password`, `next.config.js` exposing a secret-shaped var |
+| `sql` | 8 | SQL string concatenation, Prisma `$queryRawUnsafe` / `$executeRawUnsafe`, Knex `.raw()` interpolation, Python f-string / `.format()` queries, MongoDB `$where`, SQLAlchemy `text()` + f-string, Django `.raw()` + f-string, Sequelize `query()` template-literal |
+| `xss` | 8 | React `dangerouslySetInnerHTML` with a dynamic value, Vue `v-html`, Svelte `{@html}`, direct `innerHTML =`, `href="javascript:…"`, `target="_blank"` without `rel=noopener`, `eval` / `new Function` on template literal, `window.open(var)` |
+| `auth` | 17 | Hardcoded JWT secret / JWT `alg: none` / JWT verified via `decode`, missing cookie flags, low-round bcrypt, MD5/SHA1 for passwords, `Math.random` for tokens, OAuth without `state`, session in `localStorage`, multi-year cookie lifetime, mass-assignment via `req.body.role`, CSRF middleware missing on state-change routes, timing-unsafe secret comparison, password min-length under 8, email-enumeration in login, password in URL query |
+| `llm` | 12 | User input in a system prompt, `eval` / `new Function` on LLM output, client-side Anthropic/OpenAI SDK with a visible key, tool params into shell/file IO, LLM output rendered as raw HTML, system prompt in client-reachable module, vector-DB SDK with `NEXT_PUBLIC_*` key, secret interpolated into prompt, fetch with `apiKey` in the body, prompt template path chosen by request input, agent tool handler shells out on LLM input, `stream:true` without abort |
+| `misconfig` | 38 | CORS `*`, Supabase RLS off, Firebase `if true`, open redirect, Express without `helmet`, Next.js Server Action with no auth, S3 public ACL, SSRF from request input, cloud-metadata IP fetch, iframe `src` from user input, missing CSP, path traversal via request input, Django `DEBUG = True`, shell `exec` on request input, Python `yaml.load` / `pickle.loads` / remote-loaded model, XXE-prone XML parsers, `rejectUnauthorized=false`, Mongoose `find(req.query)`, webhook without signature check, auth-facing routes without rate limit, GraphQL introspection / cost guard, Redis no-auth, verbose error stack traces, `/admin` /`/debug` routes without auth, CRLF-injectable `setHeader`, `verifyClient` returning true on WebSocket, temp files built with `Math.random`, remote ML model load, Host-header trust, CORS credentials + origin reflection, zip-slip archive extract, RegExp from user input, logs containing `req.body` |
 | `docker` | 2 | Dockerfile `FROM :latest` / untagged, `apt-get install` without `--no-install-recommends` |
-| `iac` | 4 | Terraform security group `0.0.0.0/0`, Terraform public S3 ACL, Kubernetes `hostPath`, Kubernetes `privileged: true` |
+| `iac` | 9 | Terraform security group `0.0.0.0/0`, Terraform public S3 ACL, Terraform unencrypted storage, Kubernetes `hostPath`, Kubernetes `privileged: true`, Kubernetes Secret with plain `stringData`, GitHub Actions `run:` with `${{ github.event.* }}`, GitHub Actions with broad write permissions, GitHub Actions `uses:` pinned to a mutable branch |
 
 Call `list_checks` or `claude-guard rules` to see the full active catalogue. Rules are YAML — `rules/<category>/CG-XXX-NNN-slug.yml`. Contributions welcome.
 
@@ -132,8 +184,11 @@ Call `list_checks` or `claude-guard rules` to see the full active catalogue. Rul
 
 Auto-fix strategies shipped today:
 
-- `rename_env_var` — renames `NEXT_PUBLIC_*` secret-like variables in `.env*` **and** all referencing source files in one pass.
+- `rename_env_var` — renames `NEXT_PUBLIC_*` secret-like variables in `.env*` **and** every referencing source file in one pass.
 - `set_cookie_flags` — AST-based via `ts-morph`. Adds missing `httpOnly` / `secure` / `sameSite` to `cookies().set(...)` calls while preserving your existing options and formatting.
+- `split_server_only` — prepends `import "server-only";` to files that use Supabase `service_role`, so Next.js refuses to ship them to the client bundle.
+- `parameterize_query` — rewrites Prisma `$queryRawUnsafe` / `$executeRawUnsafe` calls to the tagged-template form, handling both template-literal inputs and `(string, ...params)` placeholders.
+- `wrap_with_authz_guard` — adds an `auth()` import (if missing) and prepends an `await auth()` + `if (!session) throw` guard to every exported async Server Action.
 - `suggest_only` — inserts an inline `// claude-guard: ...` annotation on the vulnerable line with the rule id and a short explanation. Used for issues where an automatic rewrite would be unsafe without human judgement.
 
 Everything else is surfaced as an annotated suggestion. The project's position is: **a wrong automatic fix is worse than a clearly annotated manual one**.
@@ -174,6 +229,44 @@ redteam:
 ```
 
 Run `init_config` to create this file with defaults.
+
+## How claude-guard compares
+
+| | claude-guard | Semgrep | Gitleaks | Snyk Code | SonarQube |
+|---|---|---|---|---|---|
+| MCP server for Claude Code / Desktop | ✅ | — | — | — | — |
+| AI-vibe-coding-specific rules (NEXT_PUBLIC secrets, LLM SDK client leaks, prompt injection, service_role) | ✅ | partial | — | — | — |
+| Checkbox-approved auto-fix with git branch staging | ✅ | — | — | — | — |
+| 0 API keys, 0 network calls by default | ✅ | ✅ (local) | ✅ | — | — |
+| SARIF 2.1.0 output | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Security grade / scorecard | ✅ | — | — | partial | ✅ |
+| Opt-in loopback-only PoC probe | ✅ | — | — | — | — |
+| Rule catalogue size | 120 | 2000+ | secrets-only | thousands | thousands |
+
+claude-guard is intentionally small and opinionated for one audience: people shipping AI-generated code who need fast, actionable, fix-oriented feedback inside their agent. It is complementary to Semgrep / Sonar / Snyk, not a replacement — run it alongside.
+
+## FAQ
+
+**Does claude-guard send my code anywhere?**
+No. Default mode does no network calls, no telemetry, and never prompts an LLM on your behalf. The "LLM-native rules" are interpreted by whatever Claude is already in your MCP client — claude-guard itself is just regex + YAML.
+
+**Does it run arbitrary code from rule files?**
+No. Rules are YAML; we don't load JavaScript from rules. Every regex is screened by `safe-regex2` at load time and wrapped in the platform's normal regex engine with no `eval` path.
+
+**What's the red-team mode actually doing?**
+If (and only if) you run `redteam_probe`, claude-guard sends one HTTP GET to a loopback URL you pass it. Loopback is enforced by string check **and** DNS lookup — a rebinding record that resolves to a public IP is rejected. There's a rate limiter on top. See `SECURITY.md` for the full list of guardrails.
+
+**Why the checkbox UX instead of auto-fix-everything?**
+Auto-fixing a mis-identified SQL injection turns a false positive into a functional regression. Forcing you to tick `[x]` on each finding trades a bit of keystroke time for confidence — and bulk-applying still works via `apply_fixes --mode=all_safe`.
+
+**Does it replace Snyk / Semgrep / Sonar?**
+No. Run it alongside. claude-guard's niche is "the 100 things Claude-assisted code gets wrong most often, with fixes wired up."
+
+**How do I ignore a noisy rule?**
+Three knobs, pick the one that matches your lifetime: inline `// claude-guard-disable-next-line CG-XXX-NNN`, a `.claude-guard/ignore.yml` entry via `claude-guard suppress <finding_id>`, or a config-level `severity_overrides` entry that demotes the rule to `LOW` so it falls below the threshold.
+
+**Can I write my own rules?**
+Yes — drop a YAML file in `rules/<category>/CG-XXX-NNN.yml`, add `bad/` and `good/` fixture files, and the fixture regression test will enforce that your rule fires on the bad case and is silent on the good case. For community packages, publish to npm as `claude-guard-plugin-*`, include a `claude-guard-plugin.yml` manifest, and list the package in `config.yaml` `plugins.allowed`.
 
 ## Not goals
 

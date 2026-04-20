@@ -1,8 +1,8 @@
 # claude-guard rule catalogue
 
-110 active builtin rules.
+120 active builtin rules.
 
-## Authentication & sessions (17)
+## Authentication & sessions (18)
 
 ### CG-AUTH-001 — JWT signing secret is a short literal
 - **Severity:** HIGH
@@ -162,6 +162,16 @@
 > "invalid credentials" message in both cases and log the exact reason
 > server-side only.
 
+### CG-AUTH-018 — Basic auth middleware uses a hardcoded username/password literal
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> express-basic-auth with inline { user: password } pairs ships
+> credentials in source. Read the user list from an env var with a
+> hashed-password lookup, and replace the whole mechanism with session
+> cookies + a real auth provider once you can.
+
 ## Docker (2)
 
 ### CG-DOCKER-001 — Dockerfile installs packages without --no-install-recommends
@@ -181,7 +191,7 @@
 > you one upstream push away from pulling in a backdoored image. Pin to
 > an explicit digest or a tagged release you've verified.
 
-## Infrastructure as code (9)
+## Infrastructure as code (10)
 
 ### CG-IAC-001 — Terraform security group allows 0.0.0.0/0
 - **Severity:** CRITICAL
@@ -259,7 +269,16 @@
 > credential defeats the point of secrets. Use Sealed Secrets, SOPS,
 > External Secrets, or deploy the secret out-of-band from the manifest.
 
-## LLM / AI-specific risks (12)
+### CG-IAC-010 — Terraform RDS instance with publicly_accessible = true
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> A public RDS instance is scanned constantly by the internet and a
+> single weak credential becomes a database compromise. Put the
+> instance in private subnets and reach it via VPC peering, VPN, or a
+> bastion.
+
+## LLM / AI-specific risks (13)
 
 ### CG-LLM-001 — User input interpolated into a system/role prompt
 - **Severity:** HIGH
@@ -381,151 +400,18 @@
 > your own voice. Keep templates in a fixed set, look them up by a
 > strict enum key, and never accept a path.
 
-## Secrets (16)
-
-### CG-SEC-001 — NEXT_PUBLIC_* env var appears to hold a secret
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `rename_env_var`
-
-> NEXT_PUBLIC_ prefixed variables are inlined into the client bundle.
-> A name like *_SECRET / *_KEY / *_TOKEN / *_PASSWORD suggests a credential
-> that must never reach the browser. Rename without the NEXT_PUBLIC_ prefix
-> and access it only from server code.
-
-### CG-SEC-002 — Hardcoded API key or token literal
-- **Severity:** CRITICAL
+### CG-LLM-013 — RAG retriever passes fetched document straight into a system prompt
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript, python
 - **Fix strategy:** `suggest_only`
 
-> Literal credentials embedded in source leak via git history, npm tarballs,
-> and CI logs. Rotate immediately, then move the secret behind an env var
-> or secret manager.
+> Retrieved documents are untrusted by default (an attacker who can
+> write a doc into your index can write instructions). Keep retrieved
+> content in a user-role message, wrap it in an explicit
+> "treat-as-data" delimiter, and consider a secondary-call filter that
+> rejects prompt-override attempts before the answer is returned.
 
-### CG-SEC-003 — Supabase service_role key used where it may reach the client
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `split_server_only`
-
-> The Supabase service_role key bypasses Row Level Security. It must only
-> exist in server code (route handlers, server actions, edge runtime with
-> "server-only" import). Any client-reachable module that references it is
-> a full database compromise waiting to happen.
-
-### CG-SEC-004 — AWS access key ID embedded in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> AWS access key IDs follow AKIA* in production or ASIA* for session
-> tokens. If this is a real key, rotate it immediately via the IAM
-> console, scrub git history, and move it behind AWS Secrets Manager or
-> Parameter Store.
-
-### CG-SEC-005 — Private key material embedded in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Private keys in source are a guaranteed leak via git, CI logs, and npm
-> tarballs. Generate a new key pair, distribute the new public key, and
-> retire the leaked one.
-
-### CG-SEC-006 — Real .env file (not .env.example) present in repo
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> Non-example .env files belong in .gitignore. If this file is committed,
-> assume the secrets inside are leaked and rotate them. Use .env.example
-> with placeholder values for documentation.
-
-### CG-SEC-007 — Slack webhook URL embedded in source
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> Slack webhooks can be used by anyone who sees them. Revoke the webhook,
-> rotate it, and store the replacement in an env var.
-
-### CG-SEC-008 — GCP service account JSON key committed in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Committing a GCP service-account JSON key grants anyone with the file
-> the permissions of that account. Rotate the key in IAM, prefer
-> Workload Identity or OIDC federation, and store any key material in a
-> secret manager.
-
-### CG-SEC-009 — Stripe live secret key (sk_live_…) appears in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> A Stripe live secret key in source has direct financial consequences:
-> anyone who reads the file can issue charges or refunds. Rotate via
-> the Stripe dashboard immediately, move the key to your secret
-> manager, and audit the account for unexpected API calls.
-
-### CG-SEC-010 — GitHub fine-grained personal access token in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> github_pat_* tokens grant repo or org-level API access. Rotate via
-> GitHub settings immediately, scrub git history, and move the token
-> to a secret manager. Prefer GitHub App installation tokens for
-> automation.
-
-### CG-SEC-011 — kubeconfig / cluster-admin token committed
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> A committed kubeconfig with embedded client cert/key or bearer token
-> is cluster-admin-in-git. Rotate the cert/token in the cluster, remove
-> from history, and distribute credentials via short-lived OIDC or
-> sealed-secrets instead.
-
-### CG-SEC-012 — Test fixture / snapshot file contains live-looking credential
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> Tokens and keys that look real should not ship in test fixtures or
-> snapshots — they are discoverable via GitHub search and get abused.
-> Swap them for obviously fake strings ("sk-test-FAKE", "AKIA" + zeros)
-> and regenerate snapshots.
-
-### CG-SEC-013 — next.config exposes a secret-looking env to the client bundle
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> next.config's `env:` field inlines values into the client bundle at
-> build time. If the variable name suggests a credential, you've just
-> shipped it to every browser. Access the secret via a server-only
-> path (API route, Server Action, middleware) and drop it from
-> next.config's env.
-
-### CG-SEC-014 — Fully-formed JWT embedded in source
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> A JWT found at rest in a source file is either leaked production
-> credential material or a tempting target for supply-chain attackers.
-> Rotate the signing key immediately, revoke and re-issue tokens, and
-> store any JWT test fixtures with obviously fake payloads.
-
-### CG-SEC-015 — Google / Firebase API key embedded in source
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> AIza... keys cover most Google Cloud and Firebase APIs. Even when a
-> key is "unrestricted but scoped to Firebase web SDK", a committed key
-> ends up used by scrapers. Restrict the key to specific APIs and HTTP
-> referrers, and rotate if leaked.
-
-### CG-SEC-016 — MongoDB connection string with inline username:password
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> mongodb://user:password@... strings leak credentials via source,
-> history, and log lines. Use a URI-less driver config that reads the
-> username and password from env vars, and template the URI at runtime.
-
-## Misconfiguration (38)
+## Misconfiguration (42)
 
 ### CG-CFG-001 — CORS Access-Control-Allow-Origin set to '*'
 - **Severity:** HIGH
@@ -883,7 +769,283 @@
 > or a cost-limit plugin (graphql-cost-analysis, apollo-server-plugin-
 > operation-registry) and enforce a max-depth.
 
-## Cross-site scripting (8)
+### CG-CFG-039 — Cookie Domain set to a bare apex (shares cookie with every subdomain)
+- **Severity:** LOW
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> domain: ".example.com" shares the cookie with every subdomain,
+> including ones your team doesn't control (customer.example.com,
+> legacy.example.com). Scope cookies to the narrowest host that
+> needs them, and default to no Domain attribute if the app runs on a
+> single host.
+
+### CG-CFG-040 — Express app.set('trust proxy', true) accepts any X-Forwarded-For
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> 'trust proxy: true' tells Express to trust every upstream, which means
+> any client can spoof req.ip by sending their own X-Forwarded-For
+> header. Use the number of hops you actually have, or a specific
+> CIDR / IP, instead of unconditional trust.
+
+### CG-CFG-041 — Cron handler under app/api/cron — verify CRON_SECRET Bearer check
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Vercel cron routes are publicly reachable — anyone with the URL can
+> trigger the job. Check the Authorization header against
+> process.env.CRON_SECRET (Vercel sends a Bearer token for scheduled
+> invocations) and reject otherwise.
+
+### CG-CFG-042 — User-uploaded file served without X-Content-Type-Options: nosniff
+- **Severity:** LOW
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Streaming user-uploaded files without forcing nosniff lets browsers
+> MIME-sniff HTML into an active context (stored XSS via download).
+> Always set X-Content-Type-Options: nosniff and serve uploads from a
+> sandbox origin.
+
+## SQL / NoSQL injection (9)
+
+### CG-SQL-001 — SQL string concatenation with a variable
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Concatenating user-controlled data into a raw SQL string is the canonical
+> injection vector. Use parameterized queries, the ORM's safe API, or a
+> tagged-template builder instead.
+
+### CG-SQL-002 — Prisma $queryRawUnsafe / $executeRawUnsafe
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `parameterize_query`
+
+> Prefer the tagged-template form `$queryRaw\u0060...\u0060`, which parameterizes
+> interpolations. The Unsafe variants concatenate strings and are vulnerable
+> to SQL injection the same way manual concatenation is.
+
+### CG-SQL-003 — MongoDB $where operator with a string
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> MongoDB's $where evaluates JavaScript on the server. Passing user input
+> into it is NoSQL injection. Replace with structured query operators or
+> validate the input as a strict enum before using.
+
+### CG-SQL-004 — Knex .raw() with template-string interpolation
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Interpolating into knex.raw() bypasses parameter binding. Pass bindings
+> as the second argument: .raw('? ... ?', [value1, value2]).
+
+### CG-SQL-005 — Python f-string or .format() composing a SQL query
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> Python's f-strings and .format() assemble the final string before the
+> DB driver sees it, so bind parameters are lost. Pass parameters as a
+> tuple or dict in the second argument to execute().
+
+### CG-SQL-006 — SQLAlchemy text() composed with f-string or .format()
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> text() evaluates the final string as SQL. If you build it with an
+> f-string or .format(), injection is back. Use bindparams: text("...
+> WHERE id = :id").bindparams(id=id) or stick to the expression
+> language.
+
+### CG-SQL-007 — Django raw() composed with f-string or .format()
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> Django's QuerySet.raw() takes optional params; pass them separately
+> rather than formatting user input into the SQL string. .raw("SELECT
+> ... WHERE id = %s", [id]) is safe; an f-string is not.
+
+### CG-SQL-008 — Sequelize query() with interpolated SQL string
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Template-string interpolation into sequelize.query() bypasses the
+> parameter replacement system. Pass the second argument as
+> { replacements: { name: value } } and reference :name in the SQL.
+
+### CG-SQL-009 — TypeORM manager.query() with template-literal interpolation
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> TypeORM's manager.query() accepts a parameter array as the second
+> argument. Templates interpolate directly into the SQL string and
+> lose binding. Pass parameters: manager.query(`SELECT ... WHERE id=$1`, [id]).
+
+## Secrets (17)
+
+### CG-SEC-001 — NEXT_PUBLIC_* env var appears to hold a secret
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `rename_env_var`
+
+> NEXT_PUBLIC_ prefixed variables are inlined into the client bundle.
+> A name like *_SECRET / *_KEY / *_TOKEN / *_PASSWORD suggests a credential
+> that must never reach the browser. Rename without the NEXT_PUBLIC_ prefix
+> and access it only from server code.
+
+### CG-SEC-002 — Hardcoded API key or token literal
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Literal credentials embedded in source leak via git history, npm tarballs,
+> and CI logs. Rotate immediately, then move the secret behind an env var
+> or secret manager.
+
+### CG-SEC-003 — Supabase service_role key used where it may reach the client
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `split_server_only`
+
+> The Supabase service_role key bypasses Row Level Security. It must only
+> exist in server code (route handlers, server actions, edge runtime with
+> "server-only" import). Any client-reachable module that references it is
+> a full database compromise waiting to happen.
+
+### CG-SEC-004 — AWS access key ID embedded in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> AWS access key IDs follow AKIA* in production or ASIA* for session
+> tokens. If this is a real key, rotate it immediately via the IAM
+> console, scrub git history, and move it behind AWS Secrets Manager or
+> Parameter Store.
+
+### CG-SEC-005 — Private key material embedded in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Private keys in source are a guaranteed leak via git, CI logs, and npm
+> tarballs. Generate a new key pair, distribute the new public key, and
+> retire the leaked one.
+
+### CG-SEC-006 — Real .env file (not .env.example) present in repo
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> Non-example .env files belong in .gitignore. If this file is committed,
+> assume the secrets inside are leaked and rotate them. Use .env.example
+> with placeholder values for documentation.
+
+### CG-SEC-007 — Slack webhook URL embedded in source
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> Slack webhooks can be used by anyone who sees them. Revoke the webhook,
+> rotate it, and store the replacement in an env var.
+
+### CG-SEC-008 — GCP service account JSON key committed in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Committing a GCP service-account JSON key grants anyone with the file
+> the permissions of that account. Rotate the key in IAM, prefer
+> Workload Identity or OIDC federation, and store any key material in a
+> secret manager.
+
+### CG-SEC-009 — Stripe live secret key (sk_live_…) appears in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> A Stripe live secret key in source has direct financial consequences:
+> anyone who reads the file can issue charges or refunds. Rotate via
+> the Stripe dashboard immediately, move the key to your secret
+> manager, and audit the account for unexpected API calls.
+
+### CG-SEC-010 — GitHub fine-grained personal access token in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> github_pat_* tokens grant repo or org-level API access. Rotate via
+> GitHub settings immediately, scrub git history, and move the token
+> to a secret manager. Prefer GitHub App installation tokens for
+> automation.
+
+### CG-SEC-011 — kubeconfig / cluster-admin token committed
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> A committed kubeconfig with embedded client cert/key or bearer token
+> is cluster-admin-in-git. Rotate the cert/token in the cluster, remove
+> from history, and distribute credentials via short-lived OIDC or
+> sealed-secrets instead.
+
+### CG-SEC-012 — Test fixture / snapshot file contains live-looking credential
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> Tokens and keys that look real should not ship in test fixtures or
+> snapshots — they are discoverable via GitHub search and get abused.
+> Swap them for obviously fake strings ("sk-test-FAKE", "AKIA" + zeros)
+> and regenerate snapshots.
+
+### CG-SEC-013 — next.config exposes a secret-looking env to the client bundle
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> next.config's `env:` field inlines values into the client bundle at
+> build time. If the variable name suggests a credential, you've just
+> shipped it to every browser. Access the secret via a server-only
+> path (API route, Server Action, middleware) and drop it from
+> next.config's env.
+
+### CG-SEC-014 — Fully-formed JWT embedded in source
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> A JWT found at rest in a source file is either leaked production
+> credential material or a tempting target for supply-chain attackers.
+> Rotate the signing key immediately, revoke and re-issue tokens, and
+> store any JWT test fixtures with obviously fake payloads.
+
+### CG-SEC-015 — Google / Firebase API key embedded in source
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> AIza... keys cover most Google Cloud and Firebase APIs. Even when a
+> key is "unrestricted but scoped to Firebase web SDK", a committed key
+> ends up used by scrapers. Restrict the key to specific APIs and HTTP
+> referrers, and rotate if leaked.
+
+### CG-SEC-016 — MongoDB connection string with inline username:password
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> mongodb://user:password@... strings leak credentials via source,
+> history, and log lines. Use a URI-less driver config that reads the
+> username and password from env vars, and template the URI at runtime.
+
+### CG-SEC-017 — Twilio Account SID (AC…) paired with a literal Auth Token
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> AC-prefixed Twilio Account SIDs combined with a 32-hex Auth Token
+> literal in the same file is a leaked Twilio credential. Rotate the
+> token in the console, revoke the compromised one, and move both to
+> env vars (or Twilio's API Key feature for scoped access).
+
+## Cross-site scripting (9)
 
 ### CG-XSS-001 — dangerouslySetInnerHTML with a dynamic expression
 - **Severity:** HIGH
@@ -956,75 +1118,12 @@
 > tabs (tabnabbing). Validate the URL against a strict scheme/host
 > allowlist and pass "noopener,noreferrer" in the features argument.
 
-## SQL / NoSQL injection (8)
-
-### CG-SQL-001 — SQL string concatenation with a variable
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Concatenating user-controlled data into a raw SQL string is the canonical
-> injection vector. Use parameterized queries, the ORM's safe API, or a
-> tagged-template builder instead.
-
-### CG-SQL-002 — Prisma $queryRawUnsafe / $executeRawUnsafe
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `parameterize_query`
-
-> Prefer the tagged-template form `$queryRaw\u0060...\u0060`, which parameterizes
-> interpolations. The Unsafe variants concatenate strings and are vulnerable
-> to SQL injection the same way manual concatenation is.
-
-### CG-SQL-003 — MongoDB $where operator with a string
-- **Severity:** HIGH
+### CG-XSS-009 — JSX anchor href={expr} without a scheme guard
+- **Severity:** MEDIUM
 - **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> MongoDB's $where evaluates JavaScript on the server. Passing user input
-> into it is NoSQL injection. Replace with structured query operators or
-> validate the input as a strict enum before using.
-
-### CG-SQL-004 — Knex .raw() with template-string interpolation
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Interpolating into knex.raw() bypasses parameter binding. Pass bindings
-> as the second argument: .raw('? ... ?', [value1, value2]).
-
-### CG-SQL-005 — Python f-string or .format() composing a SQL query
-- **Severity:** CRITICAL
-- **Languages:** python
-- **Fix strategy:** `suggest_only`
-
-> Python's f-strings and .format() assemble the final string before the
-> DB driver sees it, so bind parameters are lost. Pass parameters as a
-> tuple or dict in the second argument to execute().
-
-### CG-SQL-006 — SQLAlchemy text() composed with f-string or .format()
-- **Severity:** CRITICAL
-- **Languages:** python
-- **Fix strategy:** `suggest_only`
-
-> text() evaluates the final string as SQL. If you build it with an
-> f-string or .format(), injection is back. Use bindparams: text("...
-> WHERE id = :id").bindparams(id=id) or stick to the expression
-> language.
-
-### CG-SQL-007 — Django raw() composed with f-string or .format()
-- **Severity:** CRITICAL
-- **Languages:** python
-- **Fix strategy:** `suggest_only`
-
-> Django's QuerySet.raw() takes optional params; pass them separately
-> rather than formatting user input into the SQL string. .raw("SELECT
-> ... WHERE id = %s", [id]) is safe; an f-string is not.
-
-### CG-SQL-008 — Sequelize query() with interpolated SQL string
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Template-string interpolation into sequelize.query() bypasses the
-> parameter replacement system. Pass the second argument as
-> { replacements: { name: value } } and reference :name in the SQL.
+> Rendering <a href={userInput}> can yield `javascript:` or `data:` URLs
+> if the value isn't validated. Wrap in a helper that only allows
+> explicit schemes (https, mailto, tel) and falls back to a safe
+> value.
