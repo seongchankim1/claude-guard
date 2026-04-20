@@ -2,24 +2,24 @@
 
 This doc explains, in detail, how claude-guard protects your code and how it protects itself. The main [README](../README.md) is a short overview; this is the full story.
 
-## Detection — three layers
+## Detection
+
+`scan` runs two layers:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  L1  OSS engines (optional, auto-detected)                   │
-│      semgrep · gitleaks · osv-scanner · npm/pip audit        │
+│  L1  OSS engines (optional, auto-detected at scan time)      │
+│      semgrep · gitleaks   (others planned; see below)        │
 ├──────────────────────────────────────────────────────────────┤
-│  L2  155 builtin YAML rules                                  │
+│  L2  builtin YAML rules (default, always on)                 │
 │      secrets · sql · xss · auth · llm · misconfig · docker · iac │
-├──────────────────────────────────────────────────────────────┤
-│  L3  Red-team simulator (opt-in)                             │
-│      static PoC payloads + loopback-only live probe          │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-- **L1** orchestrates the best existing OSS tools if they're installed — Semgrep's 2000+ ruleset, Gitleaks' git-history secret scan, OSV CVEs. All optional; claude-guard works with just L2.
-- **L2** is claude-guard's own rule catalog: YAML regex patterns focused on the failure modes AI-generated code gets wrong. Every rule ships with positive + negative fixtures; the test suite enforces that the rule fires on the bad case and stays silent on the good one.
-- **L3** is opt-in and off by default. `redteam_probe` sends **one** HTTP GET against a loopback URL to demonstrate an attack path. External targets are hard-blocked (see [Red-team guardrails](#red-team-guardrails) below).
+- **L1** shells out to OSS tools you already have installed. Currently wired: Semgrep (if `semgrep` is on `PATH`, uses its `p/default` ruleset) and Gitleaks (if `gitleaks` is on `PATH` and the project has a `.git` directory). Absent binaries are skipped silently. `osv-scanner`, `trivy`, and `npm/pip audit` adapters are on the roadmap but not yet implemented.
+- **L2** is claude-guard's own catalog: YAML regex patterns focused on the failure modes AI-generated code gets wrong. Every rule ships with positive + negative fixtures, and the test suite enforces that the rule fires on the bad case and stays silent on the good one.
+
+`redteam_probe` is a **separate, opt-in MCP tool** — not part of the `scan` pipeline. It sends one HTTP GET against a loopback URL to demonstrate the attack path for a specific finding. External targets are hard-blocked (see [Red-team guardrails](#red-team-guardrails) below), and the tool refuses to run unless `redteam.enabled: true` in `.claude-guard/config.yaml`.
 
 Every engine produces the same normalized `Finding` (rule_id, severity, file, line, evidence, fix_strategy), deduped by `(file, line, rule_id)`.
 
@@ -107,10 +107,10 @@ An unsafe pattern rejects the **entire rule file**, not silently partial-loads.
 
 ### Git safety
 
-- Dirty working tree → refused, unless `force=true`.
+- Dirty working tree → refused by default. Override per-run with `force=true`, or project-wide via `fix.require_clean_tree: false` in `.claude-guard/config.yaml`.
 - Fixes land on a `claude-guard/fix-<scan_id>` branch, not your current branch.
 - Changes are staged but **not committed**. You own the commit.
-- Unified-diff rollback patch saved for every fix batch.
+- Unified-diff rollback patch saved for every fix batch, reverse-applied by `claude-guard rollback <scan_id>` (CLI) or the `rollback` MCP tool.
 - `claude-guard install-hooks` installs an idempotent pre-commit hook that blocks commits introducing CRITICAL findings, chaining any existing hook.
 
 ---

@@ -29,6 +29,7 @@ Usage:
   claude-guard scan [path] [--json] [--diff=main] [--severity=HIGH] [--only=secrets,sql] [--except=llm]
       Run scan. --severity floor, --only/--except filter by category, --diff scans only changed files vs the base ref.
   claude-guard fix [path]            One-shot scan + apply_fixes in "all_safe" mode
+  claude-guard rollback <scan_id> [path]    Revert a prior apply_fixes using its saved unified-diff patch
   claude-guard list [path]           Render findings.md for latest scan
   claude-guard score [path]          Show grade/score for latest scan
   claude-guard badge [path]          Emit shields.io endpoint JSON for the latest scan
@@ -110,6 +111,7 @@ async function main(argv: string[]): Promise<number> {
             layers_run: r.layers_run,
             summary_by_severity: r.summary_by_severity,
             scorecard: card,
+            plugin_warnings: r.plugin_warnings,
           },
           null,
           2
@@ -133,8 +135,43 @@ async function main(argv: string[]): Promise<number> {
       process.stdout.write(
         color.dim("  next: claude-guard list   # toggle [x] on fixes\n")
       );
+      if (r.plugin_warnings && r.plugin_warnings.length > 0) {
+        process.stdout.write(
+          color.yellow(
+            `  plugin warnings: ${r.plugin_warnings.length} — inspect .claude-guard/scans/${r.scan_id.slice(0, 8)}.../findings.json\n`
+          )
+        );
+        for (const w of r.plugin_warnings) {
+          process.stdout.write(color.dim(`    [${w.plugin}] ${w.message}\n`));
+        }
+      }
     }
     return r.summary_by_severity.CRITICAL > 0 ? 2 : 0;
+  }
+
+  if (cmd === "rollback") {
+    const [idArg, pathArg] = rest.filter((s) => !s.startsWith("--"));
+    if (!idArg) {
+      process.stderr.write(
+        "Usage: claude-guard rollback <scan_id> [path]\n"
+      );
+      return 1;
+    }
+    const projectPath = resolve(pathArg ?? ".");
+    const { rollback } = await import("../rollback.js");
+    const result = rollback(projectPath, idArg);
+    if (result.ok) {
+      process.stdout.write(
+        color.green(`Rolled back ${result.rollback_id}\n`) +
+          color.dim(`  patch=${result.patch_path}\n`)
+      );
+      return 0;
+    }
+    process.stderr.write(
+      color.red(`Rollback failed: ${result.reason}\n`) +
+        (result.patch_path ? color.dim(`  patch=${result.patch_path}\n`) : "")
+    );
+    return 1;
   }
 
   if (cmd === "fix") {
@@ -447,7 +484,17 @@ async function latestScanId(project: string): Promise<string | null> {
   if (!existsSync(scansDir)) return null;
   const scans = await globby("*/findings.json", { cwd: scansDir });
   if (scans.length === 0) return null;
-  return scans.map((p) => p.split("/")[0]).sort().at(-1) ?? null;
+  // UUIDs aren't time-ordered — pick the newest by findings.json mtime.
+  const { stat } = await import("fs/promises");
+  const withMtime = await Promise.all(
+    scans.map(async (rel) => {
+      const id = rel.split("/")[0];
+      const s = await stat(join(scansDir, rel));
+      return { id, mtime: s.mtimeMs };
+    })
+  );
+  withMtime.sort((a, b) => b.mtime - a.mtime);
+  return withMtime[0]?.id ?? null;
 }
 
 async function loadFindings(project: string, sid: string): Promise<Finding[]> {

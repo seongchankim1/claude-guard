@@ -37,7 +37,8 @@
         "additionalProperties": false,
         "properties": {
           "regex": { "type": "string", "minLength": 1 },
-          "files": { "type": "array", "items": { "type": "string" } }
+          "files": { "type": "array", "items": { "type": "string" } },
+          "negate": { "type": "array", "items": { "type": "string", "minLength": 1 } }
         }
       }
     },
@@ -47,7 +48,6 @@
         "rename_env_var",
         "split_server_only",
         "parameterize_query",
-        "add_rls_migration",
         "wrap_with_authz_guard",
         "set_cookie_flags",
         "suggest_only"

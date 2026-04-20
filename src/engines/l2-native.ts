@@ -38,7 +38,13 @@ export async function runL2(
   }
 
   // Group patterns so we read each file at most once per distinct glob set.
-  type Task = { rule: RuleDef; pattern: RulePattern; re: RegExp; files: string[] };
+  type Task = {
+    rule: RuleDef;
+    pattern: RulePattern;
+    re: RegExp;
+    negate: RegExp[];
+    files: string[];
+  };
   const tasks: Task[] = [];
   for (const rule of rules) {
     for (const pattern of rule.patterns) {
@@ -50,7 +56,15 @@ export async function runL2(
       } catch {
         continue; // malformed regex — already screened at load, skip defensively
       }
-      tasks.push({ rule, pattern, re, files });
+      const negate: RegExp[] = [];
+      for (const n of pattern.negate ?? []) {
+        try {
+          negate.push(new RegExp(n));
+        } catch {
+          // ignore malformed negation — already screened at load
+        }
+      }
+      tasks.push({ rule, pattern, re, negate, files });
     }
   }
 
@@ -78,6 +92,23 @@ export async function runL2(
         task.re.lastIndex = 0;
         let m: RegExpExecArray | null;
         while ((m = task.re.exec(content)) !== null) {
+          // Skip the match if any `negate` pattern ALSO matches the same text.
+          // Lets rules flag broad families (e.g. NEXT_PUBLIC_*_KEY) while
+          // excluding well-known public members (ANON_KEY, PUBLISHABLE_KEY).
+          if (task.negate.length > 0) {
+            const hit = m[0];
+            let suppressed = false;
+            for (const n of task.negate) {
+              if (n.test(hit)) {
+                suppressed = true;
+                break;
+              }
+            }
+            if (suppressed) {
+              if (m[0].length === 0) task.re.lastIndex++;
+              continue;
+            }
+          }
           const { line, col } = offsetToLineCol(content, m.index);
           const lineText = extractLine(content, line);
           findings.push({

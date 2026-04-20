@@ -2,13 +2,25 @@
 
 ## 2.0.0 — 2026-04-20 — Major release
 
-claude-guard 2.0.0 marks 20 iterations and ~200 commits of continuous work. The project is production-grade: 155 rules, 5 AST auto-fixes, 10 MCP tools + 4 resources, SARIF / JUnit / HTML / CSV / shields.io exports, full GitHub Actions wiring, a community plugin template, and a 22-finding demo app.
+claude-guard 2.0.0 is the project's first stable line. It ships 155 rules, 5 AST-level auto-fixes, 10 MCP tools + 4 resources, SARIF / JUnit / HTML / CSV / shields.io exports, a GitHub Actions pipeline (CI + code-scanning + publish), a community plugin template, and a 23-finding demo app pinned into CI so we notice drift.
 
 ### Added
-- **MCP SDK integration test** (`tests/mcp.integration.test.ts`) uses `InMemoryTransport` to stand up the real MCP server and drive it from a real SDK client. Confirms every tool is callable and every resource is reachable end-to-end. **111 tests across 30 test files.**
+- **MCP SDK integration test** (`tests/mcp.integration.test.ts`) uses `InMemoryTransport` to stand up the real MCP server and drive it from a real SDK client. Confirms every tool is callable and every resource is reachable end-to-end. **121 tests across 35 test files.**
+- **Rule-pattern `negate` field**: rules can now encode "flag this family, but not these known-public members" without relying on lookbehind (e.g. `NEXT_PUBLIC_*_KEY` skipping `ANON_KEY` / `PUBLISHABLE_KEY`).
+- **Cross-rule precision test**: every rule's "good" fixture is scanned against every *other* rule to catch inter-rule false positives. Legitimate overlaps require an allowlist entry with justification.
+- **Plugin warning surfacing**: `scan` now propagates `PLUGIN_UNTRUSTED` / `PLUGIN_SCHEMA_FAIL` warnings into the saved `findings.json` and prints them in CLI output.
+- **`claude-guard rollback <scan_id>` CLI command** — the MCP tool's behavior is now reachable from the shell, matching `docs/SECURITY_MODEL.md`.
+- **CodeQL + dependency-review** workflows alongside our own scanner in `code-scanning.yml`.
+
+### Changed
+- **L3 removed from the public engine surface.** The type `Layer` and the MCP `scan` schema now only accept `"l1"` and `"l2"`. The redteam probe stays available as an opt-in *tool*, not as a scan layer, matching what the engine actually does.
+- **`fix.require_clean_tree` now honored**: `apply_fixes` reads the config flag instead of unconditionally enforcing a clean tree.
+- **`engines.semgrep` / `engines.gitleaks`** switches are now actually consulted by the scan pipeline (`disabled` skips the binary; `auto` runs it if on PATH).
+- **Dead config removed**: `engines.trivy` and `redteam.allowed_targets` are gone from `Config` — the former was never implemented, the latter was never consulted (loopback enforcement is hard-wired in target-guard).
+- **publish workflow** extracts the per-tag CHANGELOG section instead of dumping the whole file into the GitHub Release body.
 
 ### Stability
-- No breaking changes from 1.x. The semver bump marks the end of the rapid-iteration phase and the start of semver-stable maintenance.
+- No breaking changes from 1.x at the CLI surface. The MCP schema drops `"l3"` as an accepted layer — clients that passed it will see a validation error instead of a silent no-op.
 
 ## 1.8.0 — 2026-04-20
 
@@ -51,7 +63,7 @@ claude-guard 2.0.0 marks 20 iterations and ~200 commits of continuous work. The 
 ## 1.5.0 — 2026-04-20
 
 ### Added
-- **Enriched `examples/vulnerable-next-app`**. It now has 15+ files covering a realistic Next.js stack: `middleware.ts`, API routes for `/session`, `/upload`, `/chat`, `/search`, `/webhook`, a `next.config.js` that leaks a secret, a broken `firestore.rules`, a Terraform file with an open S3 + SG, and a bad Dockerfile. A clean scan of the demo now reports **22 findings, Grade F, 0/100**.
+- **Enriched `examples/vulnerable-next-app`**. It now has 15+ files covering a realistic Next.js stack: `middleware.ts`, API routes for `/session`, `/upload`, `/chat`, `/search`, `/webhook`, a `next.config.js` that leaks a secret, a broken `firestore.rules`, a Terraform file with an open S3 + SG, and a bad Dockerfile. A clean scan of the demo now reports **23 findings, Grade F, 0/100** (pinned in CI so drift is caught).
 - **`examples/claude-guard-plugin-example/`** — a reference community plugin package. Demonstrates the manifest (`claude-guard-plugin.yml`), the rule-file layout under `rules/`, and a plugin-scoped rule id (`ACME-INT-001`). Ready to fork into a `claude-guard-plugin-*` npm package.
 - **+5 rules**, for a total of 135:
   - `CG-CFG-049` — leftover `debugger` statement / Node `--inspect` port

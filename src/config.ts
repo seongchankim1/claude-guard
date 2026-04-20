@@ -7,12 +7,12 @@ import type { Config } from "./types.js";
 export const defaultConfig: Config = {
   version: 1,
   layers: ["l1", "l2"],
-  engines: { semgrep: "auto", trivy: "auto", gitleaks: "auto" },
+  engines: { semgrep: "auto", gitleaks: "auto" },
   plugins: { allowed: [] },
   severity_threshold: "LOW",
   severity_overrides: {},
   fix: { dry_run_default: false, require_clean_tree: true },
-  redteam: { enabled: false, allowed_targets: ["localhost"] },
+  redteam: { enabled: false },
 };
 
 export async function loadConfig(projectPath: string): Promise<Config> {

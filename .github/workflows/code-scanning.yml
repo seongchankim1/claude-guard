@@ -10,8 +10,10 @@ on:
 permissions:
   contents: read
   security-events: write
+  pull-requests: read
 
 jobs:
+  # Our own scanner, exported as SARIF to GitHub's Security tab.
   claude-guard:
     runs-on: ubuntu-latest
     steps:
@@ -34,3 +36,26 @@ jobs:
         with:
           sarif_file: claude-guard.sarif
           category: claude-guard
+
+  # Run GitHub's CodeQL alongside us — we're complementary, not a replacement.
+  codeql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
+
+  # Flag dependency upgrades that introduce known-vulnerable versions.
+  # Advisory on push, enforce on pull_request via fail-on-severity.
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

@@ -134,7 +134,7 @@ export function findingsToSarif(
           driver: {
             name: "claude-guard",
             version,
-            informationUri: "https://github.com/your-org/claude-guard",
+            informationUri: "https://github.com/seongchankim1/claude-guard",
             rules: sarifRules,
           },
         },

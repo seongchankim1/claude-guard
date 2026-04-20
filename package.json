@@ -40,7 +40,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/claude-guard.git"
+    "url": "https://github.com/seongchankim1/claude-guard.git"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

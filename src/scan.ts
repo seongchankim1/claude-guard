@@ -21,10 +21,16 @@ export interface ScanOptions {
   ignore_baseline?: boolean;
 }
 
+export interface PluginWarning {
+  plugin: string;
+  message: string;
+}
+
 export interface FullScanResult extends ScanResult {
   findings: Finding[];
   outPath: string;
   baseline_suppressed?: number;
+  plugin_warnings?: PluginWarning[];
 }
 
 export async function scan(
@@ -38,9 +44,14 @@ export async function scan(
   const layers = opts.layers ?? config.layers;
 
   const all: Finding[] = [];
+  const plugin_warnings: PluginWarning[] = [];
   if (layers.includes("l1")) {
-    all.push(...(await runSemgrep(projectPath)));
-    all.push(...(await runGitleaks(projectPath)));
+    if (config.engines.semgrep !== "disabled") {
+      all.push(...(await runSemgrep(projectPath)));
+    }
+    if (config.engines.gitleaks !== "disabled") {
+      all.push(...(await runGitleaks(projectPath)));
+    }
   }
   if (layers.includes("l2")) {
     const rules = await loadBuiltinRules();
@@ -51,6 +62,9 @@ export async function scan(
       );
       for (const p of pluginResults) {
         rules.push(...p.rules);
+        for (const w of p.warnings) {
+          plugin_warnings.push({ plugin: p.plugin, message: w });
+        }
       }
     }
     all.push(...(await runL2(projectPath, rules)));
@@ -101,6 +115,7 @@ export async function scan(
         scan_id,
         created_at: new Date().toISOString(),
         findings: filtered,
+        plugin_warnings: plugin_warnings.length > 0 ? plugin_warnings : undefined,
       },
       null,
       2
@@ -127,6 +142,7 @@ export async function scan(
     findings: filtered,
     outPath,
     baseline_suppressed,
+    plugin_warnings: plugin_warnings.length > 0 ? plugin_warnings : undefined,
   };
 }
 

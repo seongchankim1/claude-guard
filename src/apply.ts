@@ -4,6 +4,7 @@ import { join } from "path";
 import { simpleGit } from "simple-git";
 import { applyFix } from "./fix/index.js";
 import { parseCheckedIds } from "./findings-md.js";
+import { loadConfig } from "./config.js";
 import type { Finding } from "./types.js";
 
 export interface ApplyOptions {
@@ -32,12 +33,15 @@ export async function applyFixes(
   const hasGit = existsSync(gitDir);
 
   if (hasGit && mode !== "dry_run") {
-    const git = simpleGit(projectPath);
-    const status = await git.status();
-    if (!opts.force && !status.isClean()) {
-      throw new Error(
-        "WORKING_TREE_DIRTY: commit or stash changes, or pass force=true"
-      );
+    const cfg = await loadConfig(projectPath);
+    if (cfg.fix.require_clean_tree) {
+      const git = simpleGit(projectPath);
+      const status = await git.status();
+      if (!opts.force && !status.isClean()) {
+        throw new Error(
+          "WORKING_TREE_DIRTY: commit or stash changes, or pass force=true, or set fix.require_clean_tree=false in .claude-guard/config.yaml"
+        );
+      }
     }
   }
 
@@ -53,7 +57,19 @@ export async function applyFixes(
 
   let chosen: Finding[] = [];
   if (mode === "all_safe") {
-    chosen = findings.filter((f) => f.fix_strategy === "rename_env_var");
+    // Every AST-backed strategy. Excludes suggest_only (which only
+    // writes inline annotations) and add_rls_migration (not yet
+    // implemented — see docs/SECURITY_MODEL.md for scope).
+    const SAFE_STRATEGIES = new Set([
+      "rename_env_var",
+      "set_cookie_flags",
+      "split_server_only",
+      "parameterize_query",
+      "wrap_with_authz_guard",
+    ]);
+    chosen = findings.filter(
+      (f) => f.fix_strategy && SAFE_STRATEGIES.has(f.fix_strategy)
+    );
   } else {
     const mdPath = join(projectPath, ".claude-guard/findings.md");
     let md = "";

@@ -17,10 +17,12 @@ describe("config", () => {
     mkdirSync(join(dir, ".claude-guard"));
     writeFileSync(
       join(dir, ".claude-guard/config.yaml"),
-      "version: 1\nredteam:\n  enabled: true\n  allowed_targets: [localhost]\n"
+      "version: 1\nredteam:\n  enabled: true\nengines:\n  semgrep: disabled\n"
     );
     const c = await loadConfig(dir);
     expect(c.redteam.enabled).toBe(true);
+    expect(c.engines.semgrep).toBe("disabled");
+    expect(c.engines.gitleaks).toBe("auto");
     expect(c.severity_threshold).toBe("LOW");
   });
 });

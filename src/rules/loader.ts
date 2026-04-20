@@ -33,6 +33,9 @@ export function validateRule(rule: unknown): string | null {
   const r = rule as unknown as RuleDef;
   for (const p of r.patterns) {
     if (!isRegexSafe(p.regex)) return `unsafe regex in ${r.id}: ${p.regex}`;
+    for (const n of p.negate ?? []) {
+      if (!isRegexSafe(n)) return `unsafe negate regex in ${r.id}: ${n}`;
+    }
   }
   return null;
 }

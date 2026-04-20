@@ -1,6 +1,6 @@
 # claude-guard-plugin-example
 
-Reference plugin for [claude-guard](https://github.com/your-org/claude-guard).
+Reference plugin for [claude-guard](https://github.com/seongchankim1/claude-guard).
 
 ## What's in here
 

@@ -15,4 +15,4 @@ context_hint: |
   Disabling RLS or creating a permissive policy (using (true)) exposes
   every row to anyone with a valid anon key. Enable RLS on every table
   and scope policies to auth.uid().
-fix_strategy: add_rls_migration
+fix_strategy: suggest_only

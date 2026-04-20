@@ -11,13 +11,15 @@ export type Category =
   | "docker"
   | "other";
 
-export type Layer = "l1" | "l2" | "l3";
+// L1 = OSS orchestrator (semgrep/gitleaks if installed locally).
+// L2 = native YAML-rule engine (built-in, always available).
+// Redteam probe is an opt-in, per-finding *tool* — not a scan layer.
+export type Layer = "l1" | "l2";
 
 export type FixStrategy =
   | "rename_env_var"
   | "split_server_only"
   | "parameterize_query"
-  | "add_rls_migration"
   | "wrap_with_authz_guard"
   | "set_cookie_flags"
   | "suggest_only";
@@ -47,6 +49,11 @@ export interface Finding {
 export interface RulePattern {
   regex: string;
   files?: string[];
+  // Optional exclusion patterns: if any of these match the same text
+  // that `regex` matched, the finding is suppressed. Lets rules encode
+  // "flag NEXT_PUBLIC_*_KEY, but not SUPABASE_ANON_KEY / *_PUBLISHABLE_KEY"
+  // without relying on lookbehind (rejected by safe-regex2).
+  negate?: string[];
 }
 
 export interface RuleDef {
@@ -73,13 +80,20 @@ export interface Config {
   version: 1;
   layers: Layer[];
   engines: {
+    // Per-binary switch for L1 orchestration. "auto" runs if the binary is on
+    // PATH, "disabled" forces-skip regardless, "enabled" runs and surfaces a
+    // warning if the binary is missing.
     semgrep: "auto" | "enabled" | "disabled";
-    trivy: "auto" | "enabled" | "disabled";
     gitleaks: "auto" | "enabled" | "disabled";
   };
   plugins: { allowed: string[] };
   severity_threshold: Severity;
   severity_overrides: Record<string, Severity>;
+  // `require_clean_tree`: refuse to apply_fixes on a dirty working tree so
+  // the auto-generated rollback patch is definitely complete.
   fix: { dry_run_default: boolean; require_clean_tree: boolean };
-  redteam: { enabled: boolean; allowed_targets: string[] };
+  // `allowed_targets` was intentionally removed: the redteam probe's
+  // loopback-only enforcement is hard-wired in target-guard.ts so config
+  // can't relax it. Opting in via `redteam.enabled` is the only switch.
+  redteam: { enabled: boolean };
 }

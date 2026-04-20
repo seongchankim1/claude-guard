@@ -16,14 +16,14 @@ import { applyFixes } from "./apply.js";
 import { loadBuiltinRules } from "./rules/loader.js";
 import { renderStaticPoc } from "./redteam/static-poc.js";
 import { probe } from "./redteam/probe.js";
-import { renderDefaultConfigYaml } from "./config.js";
+import { renderDefaultConfigYaml, loadConfig } from "./config.js";
 import { scoreFindings } from "./scorecard.js";
 import { findingsToSarif } from "./sarif.js";
 import type { Finding } from "./types.js";
 
 const scanArgs = z.object({
   project_path: z.string(),
-  layers: z.array(z.enum(["l1", "l2", "l3"])).optional(),
+  layers: z.array(z.enum(["l1", "l2"])).optional(),
 });
 const listArgs = z.object({
   project_path: z.string(),
@@ -67,11 +67,21 @@ async function loadFindings(
 async function latestScanId(project: string): Promise<string | null> {
   try {
     const { globby } = await import("globby");
-    const scans = await globby("*/findings.json", {
-      cwd: join(project, ".claude-guard/scans"),
-    });
+    const { stat } = await import("fs/promises");
+    const scansDir = join(project, ".claude-guard/scans");
+    const scans = await globby("*/findings.json", { cwd: scansDir });
     if (scans.length === 0) return null;
-    return scans.map((p) => p.split("/")[0]).sort().at(-1)!;
+    // Sort by findings.json mtime — UUIDs aren't time-ordered,
+    // so a lexicographic sort picks the wrong scan.
+    const withMtime = await Promise.all(
+      scans.map(async (rel) => {
+        const id = rel.split("/")[0];
+        const s = await stat(join(scansDir, rel));
+        return { id, mtime: s.mtimeMs };
+      })
+    );
+    withMtime.sort((a, b) => b.mtime - a.mtime);
+    return withMtime[0].id;
   } catch {
     return null;
   }
@@ -177,7 +187,7 @@ export function buildServer() {
       {
         name: "scan",
         description:
-          "Scan a project for security findings across layered engines (L1 external tools if present, L2 builtin rules, L3 red-team). Writes findings to .claude-guard/scans/<scan_id>/findings.json.",
+          "Scan a project for security findings. L1 orchestrates external tools if they are on PATH (semgrep, gitleaks). L2 runs the built-in YAML rules. The red-team probe is a separate opt-in tool (redteam_probe), not a scan layer. Writes findings to .claude-guard/scans/<scan_id>/findings.json.",
         inputSchema: {
           type: "object",
           properties: {
@@ -187,7 +197,7 @@ export function buildServer() {
             },
             layers: {
               type: "array",
-              items: { type: "string", enum: ["l1", "l2", "l3"] },
+              items: { type: "string", enum: ["l1", "l2"] },
             },
           },
           required: ["project_path"],
@@ -373,26 +383,27 @@ export function buildServer() {
       }
       if (name === "rollback") {
         const a = rollbackArgs.parse(args);
-        const patchPath = join(
-          a.project_path,
-          ".claude-guard/rollback",
-          `${a.rollback_id}.patch`
-        );
-        if (!existsSync(patchPath))
-          return text(`Rollback patch not found: ${patchPath}`);
-        const { execSync } = await import("child_process");
-        try {
-          execSync(`git apply --reverse "${patchPath}"`, {
-            cwd: a.project_path,
-          });
-          return text(`Rolled back ${a.rollback_id}`);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          return text(`Rollback failed: ${msg}`);
-        }
+        const { rollback } = await import("./rollback.js");
+        const r = rollback(a.project_path, a.rollback_id);
+        return text(JSON.stringify(r, null, 2));
       }
       if (name === "redteam_probe") {
         const a = probeArgs.parse(args);
+        // Opt-in gate: config.redteam.enabled must be true.
+        const cfg = await loadConfig(a.project_path);
+        if (!cfg.redteam?.enabled) {
+          return text(
+            JSON.stringify(
+              {
+                ok: false,
+                reason: "REDTEAM_DISABLED",
+                hint: "Set redteam.enabled: true in .claude-guard/config.yaml to opt in. See SECURITY_MODEL.md for guardrails.",
+              },
+              null,
+              2
+            )
+          );
+        }
         const r = await probe(a.project_path, a.target, a.finding_id);
         return text(JSON.stringify(r, null, 2));
       }

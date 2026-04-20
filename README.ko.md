@@ -10,7 +10,7 @@ AI는 코드를 빠르게 쏟아냅니다. **claude-guard**가 그 사이에 생
 [![node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](package.json)
 [![mcp](https://img.shields.io/badge/MCP-stdio-purple)](https://modelcontextprotocol.io)
 [![rules](https://img.shields.io/badge/rules-155-8a2be2)](docs/rules.md)
-[![tests](https://img.shields.io/badge/tests-111%20passing-brightgreen)](tests)
+[![tests](https://img.shields.io/badge/tests-121%20passing-brightgreen)](tests)
 
 ```bash
 claude mcp add claude-guard -- npx -y claude-guard-mcp
@@ -27,7 +27,7 @@ claude-guard는 당신이 바이브 코딩을 하는 동안 뒤에서 지켜봐 
 ```console
 $ npx claude-guard scan ./examples/vulnerable-next-app
 
-  F   0/100   Grade F — 22개 이슈 (11 CRITICAL, 7 HIGH, 2 MEDIUM, 2 LOW)
+  F   0/100   Grade F — 23개 이슈 (12 CRITICAL, 7 HIGH, 2 MEDIUM, 2 LOW)
   scan_id=747d5448  duration=76ms  layers=l1,l2
   next: claude-guard list
 ```
@@ -107,12 +107,12 @@ jobs:
 
 | 카테고리 | 개수 |
 |---|---|
-| secrets | 16 |
+| secrets | 19 |
 | sql | 10 |
 | xss | 10 |
 | auth | 23 |
 | llm | 17 |
-| misconfig | 60 |
+| misconfig | 62 |
 | docker | 2 |
 | iac | 12 |
 

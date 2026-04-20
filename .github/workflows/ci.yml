@@ -24,16 +24,24 @@ jobs:
         run: npm run build
       - name: Test
         run: npm test
-      - name: E2E scan against vulnerable example
+      - name: E2E scan against vulnerable example (pinned counts)
         run: |
           node -e "
             import('./dist/scan.js').then(async m => {
-              const r = await m.scan('./examples/vulnerable-next-app', { layers: ['l2'] });
-              if (r.finding_count < 5) {
-                console.error('Expected the vulnerable example to produce findings, got:', r.finding_count);
+              const r = await m.scan('./examples/vulnerable-next-app', { layers: ['l2'], ignore_baseline: true });
+              const sev = r.summary_by_severity;
+              const expected = { total: 23, CRITICAL: 12, HIGH: 7, MEDIUM: 2, LOW: 2 };
+              const mismatches = [];
+              if (r.finding_count !== expected.total) mismatches.push('total=' + r.finding_count + ' (want ' + expected.total + ')');
+              for (const k of ['CRITICAL','HIGH','MEDIUM','LOW']) {
+                if (sev[k] !== expected[k]) mismatches.push(k + '=' + sev[k] + ' (want ' + expected[k] + ')');
+              }
+              if (mismatches.length) {
+                console.error('Demo-app counts drifted: ' + mismatches.join(', '));
+                console.error('If the drift is intentional, update .github/workflows/ci.yml and all README files.');
                 process.exit(1);
               }
-              console.log('OK — findings:', r.finding_count, r.summary_by_severity);
+              console.log('OK — ' + r.finding_count + ' findings:', sev);
             });
           "
 
