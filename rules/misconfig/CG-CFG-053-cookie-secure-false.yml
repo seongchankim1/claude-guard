@@ -1,0 +1,14 @@
+id: CG-CFG-053
+title: "Cookie options explicitly set secure: false"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "secure\\s*:\\s*false"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Explicitly setting a session cookie's secure attribute to false lets
+  it travel over plain HTTP. Gate via NODE_ENV: { secure: process.env.NODE_ENV === 'production' }.
+fix_strategy: suggest_only

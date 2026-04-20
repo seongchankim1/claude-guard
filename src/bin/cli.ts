@@ -25,7 +25,8 @@ import type { Finding } from "../types.js";
 
 const HELP = `claude-guard — CLI
 Usage:
-  claude-guard scan [path] [--json] [--diff=main]   Run scan (default: cwd); --json forces machine output on a TTY
+  claude-guard scan [path] [--json] [--diff=main] [--severity=HIGH] [--only=secrets,sql] [--except=llm]
+      Run scan. --severity floor, --only/--except filter by category, --diff scans only changed files vs the base ref.
   claude-guard fix [path]            One-shot scan + apply_fixes in "all_safe" mode
   claude-guard list [path]           Render findings.md for latest scan
   claude-guard score [path]          Show grade/score for latest scan
@@ -72,8 +73,29 @@ async function main(argv: string[]): Promise<number> {
     const diffFlag = rest.find((s) => s.startsWith("--diff="));
     const diff_base = diffFlag ? diffFlag.slice("--diff=".length) : undefined;
     const jsonMode = rest.includes("--json");
+    const sevFlag = rest.find((s) => s.startsWith("--severity="));
+    const onlyFlag = rest.find((s) => s.startsWith("--only="));
+    const exceptFlag = rest.find((s) => s.startsWith("--except="));
+    const severityFloor = sevFlag ? (sevFlag.slice("--severity=".length).toUpperCase() as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW") : undefined;
+    const onlyCats = onlyFlag ? new Set(onlyFlag.slice("--only=".length).split(",")) : null;
+    const exceptCats = exceptFlag ? new Set(exceptFlag.slice("--except=".length).split(",")) : null;
     const projectPath = resolve(positional[0] ?? ".");
     const r = await scan(projectPath, { layers: ["l1", "l2"], diff_base });
+    if (severityFloor || onlyCats || exceptCats) {
+      const ranks: Record<string, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
+      const floor = severityFloor ? ranks[severityFloor] : 0;
+      const filtered = r.findings.filter((f) => {
+        if (ranks[f.severity] < floor) return false;
+        if (onlyCats && !onlyCats.has(f.category)) return false;
+        if (exceptCats && exceptCats.has(f.category)) return false;
+        return true;
+      });
+      (r as { findings: typeof r.findings }).findings = filtered;
+      (r as { finding_count: number }).finding_count = filtered.length;
+      const recomputed: typeof r.summary_by_severity = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+      for (const f of filtered) recomputed[f.severity]++;
+      (r as { summary_by_severity: typeof r.summary_by_severity }).summary_by_severity = recomputed;
+    }
     const card = scoreFindings(r.findings);
     if (jsonMode || !process.stdout.isTTY) {
       process.stdout.write(

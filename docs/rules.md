@@ -1,8 +1,8 @@
 # claude-guard rule catalogue
 
-135 active builtin rules.
+140 active builtin rules.
 
-## Authentication & sessions (20)
+## Authentication & sessions (21)
 
 ### CG-AUTH-001 — JWT signing secret is a short literal
 - **Severity:** HIGH
@@ -190,6 +190,16 @@
 > which is guessable in minutes on a modern laptop. Use
 > crypto.randomBytes(32).toString('hex') for any reset / verify /
 > one-time token.
+
+### CG-AUTH-021 — WebAuthn verifyAuthentication called with requireUserVerification: false
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> WebAuthn UV = false accepts a passkey that did not confirm the user
+> (no biometric/PIN). For sign-in, require userVerification: 'preferred'
+> and reject authentications where the UV flag is not set when the
+> factor is the sole credential.
 
 ## Docker (2)
 
@@ -460,7 +470,168 @@
 > server route (API route, Server Action, Edge function) and keep the
 > key server-side.
 
-## Misconfiguration (50)
+## Secrets (18)
+
+### CG-SEC-001 — NEXT_PUBLIC_* env var appears to hold a secret
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `rename_env_var`
+
+> NEXT_PUBLIC_ prefixed variables are inlined into the client bundle.
+> A name like *_SECRET / *_KEY / *_TOKEN / *_PASSWORD suggests a credential
+> that must never reach the browser. Rename without the NEXT_PUBLIC_ prefix
+> and access it only from server code.
+
+### CG-SEC-002 — Hardcoded API key or token literal
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Literal credentials embedded in source leak via git history, npm tarballs,
+> and CI logs. Rotate immediately, then move the secret behind an env var
+> or secret manager.
+
+### CG-SEC-003 — Supabase service_role key used where it may reach the client
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `split_server_only`
+
+> The Supabase service_role key bypasses Row Level Security. It must only
+> exist in server code (route handlers, server actions, edge runtime with
+> "server-only" import). Any client-reachable module that references it is
+> a full database compromise waiting to happen.
+
+### CG-SEC-004 — AWS access key ID embedded in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> AWS access key IDs follow AKIA* in production or ASIA* for session
+> tokens. If this is a real key, rotate it immediately via the IAM
+> console, scrub git history, and move it behind AWS Secrets Manager or
+> Parameter Store.
+
+### CG-SEC-005 — Private key material embedded in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Private keys in source are a guaranteed leak via git, CI logs, and npm
+> tarballs. Generate a new key pair, distribute the new public key, and
+> retire the leaked one.
+
+### CG-SEC-006 — Real .env file (not .env.example) present in repo
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> Non-example .env files belong in .gitignore. If this file is committed,
+> assume the secrets inside are leaked and rotate them. Use .env.example
+> with placeholder values for documentation.
+
+### CG-SEC-007 — Slack webhook URL embedded in source
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> Slack webhooks can be used by anyone who sees them. Revoke the webhook,
+> rotate it, and store the replacement in an env var.
+
+### CG-SEC-008 — GCP service account JSON key committed in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Committing a GCP service-account JSON key grants anyone with the file
+> the permissions of that account. Rotate the key in IAM, prefer
+> Workload Identity or OIDC federation, and store any key material in a
+> secret manager.
+
+### CG-SEC-009 — Stripe live secret key (sk_live_…) appears in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> A Stripe live secret key in source has direct financial consequences:
+> anyone who reads the file can issue charges or refunds. Rotate via
+> the Stripe dashboard immediately, move the key to your secret
+> manager, and audit the account for unexpected API calls.
+
+### CG-SEC-010 — GitHub fine-grained personal access token in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> github_pat_* tokens grant repo or org-level API access. Rotate via
+> GitHub settings immediately, scrub git history, and move the token
+> to a secret manager. Prefer GitHub App installation tokens for
+> automation.
+
+### CG-SEC-011 — kubeconfig / cluster-admin token committed
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> A committed kubeconfig with embedded client cert/key or bearer token
+> is cluster-admin-in-git. Rotate the cert/token in the cluster, remove
+> from history, and distribute credentials via short-lived OIDC or
+> sealed-secrets instead.
+
+### CG-SEC-012 — Test fixture / snapshot file contains live-looking credential
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> Tokens and keys that look real should not ship in test fixtures or
+> snapshots — they are discoverable via GitHub search and get abused.
+> Swap them for obviously fake strings ("sk-test-FAKE", "AKIA" + zeros)
+> and regenerate snapshots.
+
+### CG-SEC-013 — next.config exposes a secret-looking env to the client bundle
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> next.config's `env:` field inlines values into the client bundle at
+> build time. If the variable name suggests a credential, you've just
+> shipped it to every browser. Access the secret via a server-only
+> path (API route, Server Action, middleware) and drop it from
+> next.config's env.
+
+### CG-SEC-014 — Fully-formed JWT embedded in source
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> A JWT found at rest in a source file is either leaked production
+> credential material or a tempting target for supply-chain attackers.
+> Rotate the signing key immediately, revoke and re-issue tokens, and
+> store any JWT test fixtures with obviously fake payloads.
+
+### CG-SEC-015 — Google / Firebase API key embedded in source
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> AIza... keys cover most Google Cloud and Firebase APIs. Even when a
+> key is "unrestricted but scoped to Firebase web SDK", a committed key
+> ends up used by scrapers. Restrict the key to specific APIs and HTTP
+> referrers, and rotate if leaked.
+
+### CG-SEC-016 — MongoDB connection string with inline username:password
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> mongodb://user:password@... strings leak credentials via source,
+> history, and log lines. Use a URI-less driver config that reads the
+> username and password from env vars, and template the URI at runtime.
+
+### CG-SEC-017 — Twilio Account SID (AC…) paired with a literal Auth Token
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> AC-prefixed Twilio Account SIDs combined with a 32-hex Auth Token
+> literal in the same file is a leaked Twilio credential. Rotate the
+> token in the console, revoke the compromised one, and move both to
+> env vars (or Twilio's API Key feature for scoped access).
+
+### CG-SEC-018 — Committed .npmrc with an inline _authToken
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> A real npm token in .npmrc can push packages under your identity.
+> Rotate via npm's website, and replace with ${NPM_TOKEN} sourced from
+> a secret at CI/deploy time.
+
+## Misconfiguration (54)
 
 ### CG-CFG-001 — CORS Access-Control-Allow-Origin set to '*'
 - **Severity:** HIGH
@@ -932,166 +1103,42 @@
 > depending on it. Wrap with AbortSignal.timeout(5000) or pass a
 > signal from your request handler.
 
-## Secrets (18)
-
-### CG-SEC-001 — NEXT_PUBLIC_* env var appears to hold a secret
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `rename_env_var`
-
-> NEXT_PUBLIC_ prefixed variables are inlined into the client bundle.
-> A name like *_SECRET / *_KEY / *_TOKEN / *_PASSWORD suggests a credential
-> that must never reach the browser. Rename without the NEXT_PUBLIC_ prefix
-> and access it only from server code.
-
-### CG-SEC-002 — Hardcoded API key or token literal
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Literal credentials embedded in source leak via git history, npm tarballs,
-> and CI logs. Rotate immediately, then move the secret behind an env var
-> or secret manager.
-
-### CG-SEC-003 — Supabase service_role key used where it may reach the client
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `split_server_only`
-
-> The Supabase service_role key bypasses Row Level Security. It must only
-> exist in server code (route handlers, server actions, edge runtime with
-> "server-only" import). Any client-reachable module that references it is
-> a full database compromise waiting to happen.
-
-### CG-SEC-004 — AWS access key ID embedded in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> AWS access key IDs follow AKIA* in production or ASIA* for session
-> tokens. If this is a real key, rotate it immediately via the IAM
-> console, scrub git history, and move it behind AWS Secrets Manager or
-> Parameter Store.
-
-### CG-SEC-005 — Private key material embedded in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Private keys in source are a guaranteed leak via git, CI logs, and npm
-> tarballs. Generate a new key pair, distribute the new public key, and
-> retire the leaked one.
-
-### CG-SEC-006 — Real .env file (not .env.example) present in repo
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> Non-example .env files belong in .gitignore. If this file is committed,
-> assume the secrets inside are leaked and rotate them. Use .env.example
-> with placeholder values for documentation.
-
-### CG-SEC-007 — Slack webhook URL embedded in source
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> Slack webhooks can be used by anyone who sees them. Revoke the webhook,
-> rotate it, and store the replacement in an env var.
-
-### CG-SEC-008 — GCP service account JSON key committed in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Committing a GCP service-account JSON key grants anyone with the file
-> the permissions of that account. Rotate the key in IAM, prefer
-> Workload Identity or OIDC federation, and store any key material in a
-> secret manager.
-
-### CG-SEC-009 — Stripe live secret key (sk_live_…) appears in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> A Stripe live secret key in source has direct financial consequences:
-> anyone who reads the file can issue charges or refunds. Rotate via
-> the Stripe dashboard immediately, move the key to your secret
-> manager, and audit the account for unexpected API calls.
-
-### CG-SEC-010 — GitHub fine-grained personal access token in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> github_pat_* tokens grant repo or org-level API access. Rotate via
-> GitHub settings immediately, scrub git history, and move the token
-> to a secret manager. Prefer GitHub App installation tokens for
-> automation.
-
-### CG-SEC-011 — kubeconfig / cluster-admin token committed
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> A committed kubeconfig with embedded client cert/key or bearer token
-> is cluster-admin-in-git. Rotate the cert/token in the cluster, remove
-> from history, and distribute credentials via short-lived OIDC or
-> sealed-secrets instead.
-
-### CG-SEC-012 — Test fixture / snapshot file contains live-looking credential
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> Tokens and keys that look real should not ship in test fixtures or
-> snapshots — they are discoverable via GitHub search and get abused.
-> Swap them for obviously fake strings ("sk-test-FAKE", "AKIA" + zeros)
-> and regenerate snapshots.
-
-### CG-SEC-013 — next.config exposes a secret-looking env to the client bundle
-- **Severity:** HIGH
+### CG-CFG-051 — Next.js next.config images.remotePatterns uses **/* with hostname: '*'
+- **Severity:** MEDIUM
 - **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> next.config's `env:` field inlines values into the client bundle at
-> build time. If the variable name suggests a credential, you've just
-> shipped it to every browser. Access the secret via a server-only
-> path (API route, Server Action, middleware) and drop it from
-> next.config's env.
+> hostname: '*' lets any origin serve images to your Next.js
+> Image component, which bypasses the optimization-origin allowlist
+> and enables content-based attacks. Scope remotePatterns to the
+> specific CDN hostnames you trust.
 
-### CG-SEC-014 — Fully-formed JWT embedded in source
-- **Severity:** HIGH
+### CG-CFG-052 — busboy / multer without fileSize limit
+- **Severity:** LOW
+- **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> A JWT found at rest in a source file is either leaked production
-> credential material or a tempting target for supply-chain attackers.
-> Rotate the signing key immediately, revoke and re-issue tokens, and
-> store any JWT test fixtures with obviously fake payloads.
+> busboy / multer without limits lets a malicious uploader exhaust disk
+> or memory. Pass limits: { fileSize: N, files: N, fields: N } with
+> values sized to your actual use case.
 
-### CG-SEC-015 — Google / Firebase API key embedded in source
-- **Severity:** HIGH
+### CG-CFG-053 — Cookie options explicitly set secure: false
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> AIza... keys cover most Google Cloud and Firebase APIs. Even when a
-> key is "unrestricted but scoped to Firebase web SDK", a committed key
-> ends up used by scrapers. Restrict the key to specific APIs and HTTP
-> referrers, and rotate if leaked.
+> Explicitly setting a session cookie's secure attribute to false lets
+> it travel over plain HTTP. Gate via NODE_ENV: { secure: process.env.NODE_ENV === 'production' }.
 
-### CG-SEC-016 — MongoDB connection string with inline username:password
-- **Severity:** CRITICAL
+### CG-CFG-054 — better-sqlite3 / sqlite3 opened with ':memory:'
+- **Severity:** LOW
+- **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> mongodb://user:password@... strings leak credentials via source,
-> history, and log lines. Use a URI-less driver config that reads the
-> username and password from env vars, and template the URI at runtime.
-
-### CG-SEC-017 — Twilio Account SID (AC…) paired with a literal Auth Token
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> AC-prefixed Twilio Account SIDs combined with a 32-hex Auth Token
-> literal in the same file is a leaked Twilio credential. Rotate the
-> token in the console, revoke the compromised one, and move both to
-> env vars (or Twilio's API Key feature for scoped access).
-
-### CG-SEC-018 — Committed .npmrc with an inline _authToken
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> A real npm token in .npmrc can push packages under your identity.
-> Rotate via npm's website, and replace with ${NPM_TOKEN} sourced from
-> a secret at CI/deploy time.
+> :memory: SQLite is fine for tests but ships with no persistence and
+> no concurrency. If this shows up in a server / deployment path, the
+> app will silently forget data on restart. Route through a file path
+> for production and keep :memory: behind a test-only guard.
 
 ## Cross-site scripting (10)
 

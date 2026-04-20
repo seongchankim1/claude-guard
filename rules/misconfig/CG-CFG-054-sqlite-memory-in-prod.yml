@@ -1,0 +1,16 @@
+id: CG-CFG-054
+title: "better-sqlite3 / sqlite3 opened with ':memory:'"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "new\\s+(Database|sqlite3\\.Database)\\s*\\(\\s*[\"']:memory:[\"']"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  :memory: SQLite is fine for tests but ships with no persistence and
+  no concurrency. If this shows up in a server / deployment path, the
+  app will silently forget data on restart. Route through a file path
+  for production and keep :memory: behind a test-only guard.
+fix_strategy: suggest_only

@@ -1,0 +1,15 @@
+id: CG-CFG-051
+title: "Next.js next.config images.remotePatterns uses **/* with hostname: '*'"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "remotePatterns\\s*:\\s*\\[[^\\]]*hostname\\s*:\\s*[\"']\\*[\"']"
+    files:
+      - "**/next.config.{js,ts,mjs,cjs}"
+context_hint: |
+  hostname: '*' lets any origin serve images to your Next.js
+  Image component, which bypasses the optimization-origin allowlist
+  and enables content-based attacks. Scope remotePatterns to the
+  specific CDN hostnames you trust.
+fix_strategy: suggest_only

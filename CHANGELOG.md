@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.6.0 — 2026-04-20
+
+### Added
+- **`scan` filter flags**: `--severity=HIGH` sets a floor, `--only=secrets,sql` narrows to the given categories, `--except=llm` drops them. Useful for focused CI gates (e.g. block only on CRITICAL secrets in a PR pipeline).
+- **+5 rules**, for a total of 140:
+  - `CG-CFG-051` — Next.js `images.remotePatterns` with `hostname: '*'`
+  - `CG-CFG-052` — multer / busboy without `limits`
+  - `CG-CFG-053` — cookie set with explicit `secure: false`
+  - `CG-AUTH-021` — WebAuthn verify with `requireUserVerification: false`
+  - `CG-CFG-054` — SQLite opened with `':memory:'` (probably not intentional in prod paths)
+
 ## 1.5.0 — 2026-04-20
 
 ### Added
