@@ -1,4 +1,5 @@
 import type { Finding, Severity } from "./types.js";
+import { scoreFindings, renderScorecardMd } from "./scorecard.js";
 
 const ORDER: Severity[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 
@@ -14,6 +15,8 @@ export function renderFindingsMd(scan_id: string, findings: Finding[]): string {
   const lines: string[] = [];
   lines.push(`# claude-guard findings — scan_id: ${scan_id}`);
   lines.push("");
+  const card = scoreFindings(findings);
+  lines.push(renderScorecardMd(card));
   lines.push(
     "> Toggle `[ ]` → `[x]` for items you want fixed. Run `apply_fixes` after saving."
   );

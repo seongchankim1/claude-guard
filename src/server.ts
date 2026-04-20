@@ -15,6 +15,7 @@ import { loadBuiltinRules } from "./rules/loader.js";
 import { renderStaticPoc } from "./redteam/static-poc.js";
 import { probe } from "./redteam/probe.js";
 import { renderDefaultConfigYaml } from "./config.js";
+import { scoreFindings } from "./scorecard.js";
 import type { Finding } from "./types.js";
 
 const scanArgs = z.object({
@@ -201,6 +202,16 @@ export function buildServer() {
           required: ["project_path"],
         },
       },
+      {
+        name: "score",
+        description:
+          "Compute a security grade (A+/A/B/C/D/F) for the latest scan.",
+        inputSchema: {
+          type: "object",
+          properties: { project_path: { type: "string" } },
+          required: ["project_path"],
+        },
+      },
     ],
   }));
 
@@ -321,6 +332,14 @@ export function buildServer() {
         const p = join(a.project_path, ".claude-guard/config.yaml");
         await writeFile(p, renderDefaultConfigYaml());
         return text(`Wrote ${p}`);
+      }
+      if (name === "score") {
+        const a = initArgs.parse(args);
+        const sid = await latestScanId(a.project_path);
+        if (!sid) return text("No scans yet. Run the `scan` tool first.");
+        const findings = await loadFindings(a.project_path, sid);
+        const card = scoreFindings(findings);
+        return text(JSON.stringify(card, null, 2));
       }
       return text(`Unknown tool: ${name}`);
     } catch (e) {

@@ -1,6 +1,7 @@
 import type { Finding } from "../types.js";
 import { renameEnvVar } from "./rename-env-var.js";
 import { suggestOnly } from "./suggest-only.js";
+import { setCookieFlags } from "./set-cookie-flags.js";
 
 export type { Finding };
 
@@ -19,6 +20,8 @@ export async function applyFix(
   switch (f.fix_strategy) {
     case "rename_env_var":
       return renameEnvVar(projectPath, f);
+    case "set_cookie_flags":
+      return setCookieFlags(projectPath, f);
     case "suggest_only":
     case undefined:
     default:

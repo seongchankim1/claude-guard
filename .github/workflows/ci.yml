@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Build
+        run: npm run build
+      - name: Test
+        run: npm test
+      - name: E2E scan against vulnerable example
+        run: |
+          node -e "
+            import('./dist/scan.js').then(async m => {
+              const r = await m.scan('./examples/vulnerable-next-app', { layers: ['l2'] });
+              if (r.finding_count < 5) {
+                console.error('Expected the vulnerable example to produce findings, got:', r.finding_count);
+                process.exit(1);
+              }
+              console.log('OK — findings:', r.finding_count, r.summary_by_severity);
+            });
+          "
+
+  rules-inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Publish rule count summary
+        run: |
+          node -e "
+            import('./dist/rules/loader.js').then(m => m.loadBuiltinRules()).then(r => {
+              const byCat = {};
+              for (const x of r) byCat[x.category] = (byCat[x.category] ?? 0) + 1;
+              const lines = ['| category | rules |', '|---|---|'];
+              for (const [c, n] of Object.entries(byCat)) lines.push('| ' + c + ' | ' + n + ' |');
+              console.log('## Rules inventory (' + r.length + ' total)\\n');
+              console.log(lines.join('\\n'));
+            });
+          " >> $GITHUB_STEP_SUMMARY

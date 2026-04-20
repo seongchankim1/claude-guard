@@ -1,0 +1,17 @@
+id: CG-SQL-005
+title: "Python f-string or .format() composing a SQL query"
+severity: CRITICAL
+category: sql
+languages: [python]
+patterns:
+  - regex: "(cursor\\.execute|session\\.execute|engine\\.execute)\\s*\\(\\s*f[\"']"
+    files:
+      - "**/*.py"
+  - regex: "(cursor\\.execute|session\\.execute|engine\\.execute)\\s*\\([^,)]*\\.format\\("
+    files:
+      - "**/*.py"
+context_hint: |
+  Python's f-strings and .format() assemble the final string before the
+  DB driver sees it, so bind parameters are lost. Pass parameters as a
+  tuple or dict in the second argument to execute().
+fix_strategy: suggest_only

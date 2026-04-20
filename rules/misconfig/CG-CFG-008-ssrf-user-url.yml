@@ -1,0 +1,15 @@
+id: CG-CFG-008
+title: "Server-side fetch to URL derived from request input"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "(fetch|axios\\.(get|post|put|delete))\\s*\\(\\s*(req|request|params|searchParams|body)\\.(query|body|searchParams|params)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Fetching an attacker-supplied URL is SSRF. At minimum, resolve the
+  hostname, block RFC1918/loopback/link-local/cloud-metadata addresses,
+  and reject non-http(s) schemes before making the request.
+fix_strategy: suggest_only

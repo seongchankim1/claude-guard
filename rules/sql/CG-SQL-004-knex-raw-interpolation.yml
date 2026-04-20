@@ -1,0 +1,14 @@
+id: CG-SQL-004
+title: "Knex .raw() with template-string interpolation"
+severity: CRITICAL
+category: sql
+languages: [javascript, typescript]
+patterns:
+  - regex: "\\.raw\\s*\\(\\s*`[^`]*\\$\\{"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+context_hint: |
+  Interpolating into knex.raw() bypasses parameter binding. Pass bindings
+  as the second argument: .raw('? ... ?', [value1, value2]).
+fix_strategy: suggest_only

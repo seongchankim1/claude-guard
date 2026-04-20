@@ -1,0 +1,16 @@
+id: CG-CFG-003
+title: "Firebase / Firestore security rule allows any read or write"
+severity: CRITICAL
+category: misconfig
+patterns:
+  - regex: "allow\\s+(read|write|get|list|create|update|delete)\\s*:\\s*if\\s+true"
+    files:
+      - "**/firestore.rules"
+      - "**/database.rules.json"
+      - "**/storage.rules"
+      - "**/*.rules"
+context_hint: |
+  'if true' rules mean any client can read or write that path. Tighten
+  the predicate to check auth (request.auth != null) and document/owner
+  match (resource.data.owner == request.auth.uid).
+fix_strategy: suggest_only

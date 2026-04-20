@@ -1,0 +1,16 @@
+id: CG-AUTH-003
+title: "bcrypt hash with fewer than 10 rounds"
+severity: HIGH
+category: auth
+languages: [javascript, typescript, python]
+patterns:
+  - regex: "bcrypt\\.(hash|hashSync|genSalt|genSaltSync)\\s*\\([^)]*,\\s*[1-9]\\s*[),]"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.py"
+context_hint: |
+  bcrypt cost below 10 is no longer considered acceptable for password
+  hashing. Use 12+ for new code and plan a rehash path for existing
+  hashes at next login.
+fix_strategy: suggest_only

@@ -1,0 +1,15 @@
+id: CG-AUTH-005
+title: "JWT decoded without signature verification"
+severity: HIGH
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "(jwt|jsonwebtoken)\\.decode\\s*\\("
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+context_hint: |
+  jwt.decode does not verify the token's signature — any client can forge
+  arbitrary claims. Use jwt.verify with the signing key, and treat an
+  unverified decode result as untrusted input only.
+fix_strategy: suggest_only

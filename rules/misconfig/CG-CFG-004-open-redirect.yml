@@ -1,0 +1,15 @@
+id: CG-CFG-004
+title: "Redirect destination taken directly from request without validation"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "(redirect|Response\\.redirect|res\\.redirect|NextResponse\\.redirect)\\s*\\(\\s*(req|request|params|searchParams|url)\\.(query|searchParams|params)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Redirecting to an attacker-controlled URL lets phishers bounce victims
+  through your brand. Validate the destination against an allowlist or
+  require same-origin before redirecting.
+fix_strategy: suggest_only

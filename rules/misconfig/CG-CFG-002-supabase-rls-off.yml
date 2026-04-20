@@ -1,0 +1,18 @@
+id: CG-CFG-002
+title: "Supabase RLS disabled or public policy present"
+severity: CRITICAL
+category: misconfig
+patterns:
+  - regex: "alter\\s+table\\s+[a-zA-Z0-9_\\.]+\\s+disable\\s+row\\s+level\\s+security"
+    files:
+      - "**/*.sql"
+      - "**/migrations/**"
+  - regex: "create\\s+policy[^;]*\\s+using\\s*\\(\\s*true\\s*\\)"
+    files:
+      - "**/*.sql"
+      - "**/migrations/**"
+context_hint: |
+  Disabling RLS or creating a permissive policy (using (true)) exposes
+  every row to anyone with a valid anon key. Enable RLS on every table
+  and scope policies to auth.uid().
+fix_strategy: add_rls_migration

@@ -1,13 +1,14 @@
 {
   "name": "claude-guard-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server that audits AI-generated code using real-attacker techniques, then fixes only the items you check.",
   "type": "module",
   "bin": {
-    "claude-guard-mcp": "dist/bin/mcp.js"
+    "claude-guard-mcp": "dist/bin/mcp.js",
+    "claude-guard": "dist/bin/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && chmod +x dist/bin/mcp.js || true",
+    "build": "tsc -p tsconfig.json && chmod +x dist/bin/mcp.js dist/bin/cli.js || true",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",

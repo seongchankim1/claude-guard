@@ -1,0 +1,22 @@
+id: CG-LLM-004
+title: "Tool/function-calling parameter forwarded directly to shell or filesystem"
+severity: HIGH
+category: llm
+languages: [javascript, typescript, python]
+patterns:
+  - regex: "(exec|execSync|spawn|spawnSync)\\s*\\(\\s*(tool_call|toolCall|tool_input|toolInput|function_call|functionCall)"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.py"
+  - regex: "(readFile|readFileSync|open|Path)\\s*\\(\\s*(tool_call|toolCall|tool_input|toolInput)"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.py"
+context_hint: |
+  Tool-calling outputs are attacker-controlled when the model takes user
+  input. Treat them as untrusted: validate against a strict schema,
+  resolve paths against an allowlisted base directory, and never pass
+  them into a shell or exec call without escaping.
+fix_strategy: suggest_only

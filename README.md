@@ -7,8 +7,10 @@
 ![mcp](https://img.shields.io/badge/MCP-stdio-purple)
 
 - One-line install. **Zero API keys. Zero network calls by default. Zero outbound telemetry.**
-- Detects across **10 languages** via an optional Semgrep adapter, plus builtin rules for the failure modes that keep showing up in AI-generated web apps.
+- **32 builtin rules** across secrets, SQL/NoSQL injection, XSS, auth, LLM-specific risks, and misconfiguration. Detects across **10 languages** via an optional Semgrep adapter.
+- **Security scorecard.** Every scan produces a 0–100 score and an A+…F grade, rendered at the top of `findings.md` and available as its own MCP tool and CLI command.
 - **Checkbox-based approval.** `claude-guard` writes a `findings.md` grouped by severity. You toggle `[x]` on the items you want fixed, then run `apply_fixes`. Nothing else is touched.
+- **AST-based auto-fixes** where an automatic rewrite is safe (e.g. injecting missing `httpOnly`/`Secure`/`SameSite` flags into `cookies().set(...)` via `ts-morph`). Everything else lands as an inline annotation for human review.
 - Opt-in red-team mode runs a proof-of-concept probe against **localhost only**, with DNS-rebinding defense and per-finding rate limiting.
 
 ## Why
@@ -18,6 +20,8 @@ Vibe-coding with Claude or any other model produces a lot of code in a hurry —
 `claude-guard` is a tiny MCP server that teaches your agent (Claude Code, Claude Desktop, or any MCP-compatible client) to look for these classes of issues the way an attacker would, then walk through the fixes with you instead of rewriting your whole repo without asking.
 
 ## Install
+
+### As an MCP server (recommended)
 
 ```bash
 claude mcp add claude-guard -- npx -y claude-guard-mcp
@@ -34,6 +38,15 @@ Or, for Claude Desktop, add to `claude_desktop_config.json`:
     }
   }
 }
+```
+
+### As a standalone CLI (optional)
+
+```bash
+npx -y claude-guard-mcp   # starts the MCP server
+npx claude-guard scan     # one-shot CLI scan of the current directory
+npx claude-guard score    # grade for the latest scan
+npx claude-guard rules    # list active builtin rules
 ```
 
 ## Usage
@@ -53,7 +66,8 @@ In any MCP client, in plain language:
 | tool | purpose |
 |---|---|
 | `scan` | Run detection (L1 Semgrep/Gitleaks if present, L2 builtin rules). Writes `findings.json`. |
-| `list_findings` | Render `.claude-guard/findings.md` with checkboxes grouped by severity. |
+| `score` | Compute the security grade (A+/A/B/C/D/F) for the latest scan. |
+| `list_findings` | Render `.claude-guard/findings.md` with a scorecard banner and checkboxes grouped by severity. |
 | `explain` | Rule rationale, attack scenario, PoC payload, fix guidance. |
 | `apply_fixes` | Apply fixes for checked items on a dedicated branch; git-staged, not committed. |
 | `rollback` | Revert a previous fix batch via saved patch. |
@@ -63,24 +77,25 @@ In any MCP client, in plain language:
 
 ## Builtin rules
 
-MVP ships with **10 rules** across six categories, targeting the issues we see most often in AI-generated web code:
+**32 rules** across six categories, targeting the failure modes we see most often in AI-generated web code:
 
-| category | example rules |
-|---|---|
-| `secrets` | `NEXT_PUBLIC_*` names that look like credentials, literal API keys in source, Supabase `service_role` in client-reachable files |
-| `sql` | SQL string concatenation with a variable, Prisma `$queryRawUnsafe` / `$executeRawUnsafe` |
-| `xss` | `dangerouslySetInnerHTML` with a dynamic expression |
-| `auth` | Hardcoded JWT signing secret, session `cookies().set(...)` worth reviewing for flags |
-| `llm` | User input interpolated into a `role: system` / `role: "system"` prompt |
-| `misconfig` | CORS `Access-Control-Allow-Origin: *` |
+| category | count | example rules |
+|---|---|---|
+| `secrets` | 7 | `NEXT_PUBLIC_*` secret names, literal API keys, Supabase `service_role` in client-reachable files, AWS keys, private-key PEM blocks, committed `.env`, Slack webhooks |
+| `sql` | 5 | SQL string concatenation, Prisma `$queryRawUnsafe` / `$executeRawUnsafe`, Knex `.raw()` interpolation, Python f-string queries, MongoDB `$where` |
+| `xss` | 3 | React `dangerouslySetInnerHTML`, Vue `v-html`, direct `innerHTML` assignment |
+| `auth` | 5 | Hardcoded JWT secret, missing cookie flags, low-round bcrypt, MD5/SHA1 password hashing, `jwt.decode` without verify |
+| `llm` | 4 | User input merged into system prompt, `eval` on LLM output, Anthropic/OpenAI SDK with client-visible key, tool params into shell/file IO |
+| `misconfig` | 8 | CORS `*`, Supabase RLS off, Firebase `if true`, open redirect, Express without `helmet`, Next.js Server Action with no auth, S3 public ACL, SSRF from request input |
 
-Call `list_checks` from your MCP client to see the full active catalogue at any time. Rules are YAML — `rules/<category>/CG-XXX-NNN-slug.yml`. Contributions welcome.
+Call `list_checks` or `claude-guard rules` to see the full active catalogue. Rules are YAML — `rules/<category>/CG-XXX-NNN-slug.yml`. Contributions welcome.
 
 ## Auto-fix coverage
 
-Auto-fix strategies shipped with MVP:
+Auto-fix strategies shipped today:
 
 - `rename_env_var` — renames `NEXT_PUBLIC_*` secret-like variables in `.env*` **and** all referencing source files in one pass.
+- `set_cookie_flags` — AST-based via `ts-morph`. Adds missing `httpOnly` / `secure` / `sameSite` to `cookies().set(...)` calls while preserving your existing options and formatting.
 - `suggest_only` — inserts an inline `// claude-guard: ...` annotation on the vulnerable line with the rule id and a short explanation. Used for issues where an automatic rewrite would be unsafe without human judgement.
 
 Everything else is surfaced as an annotated suggestion. The project's position is: **a wrong automatic fix is worse than a clearly annotated manual one**.

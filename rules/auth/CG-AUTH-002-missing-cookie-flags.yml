@@ -13,4 +13,4 @@ context_hint: |
   transmission over plain HTTP in production), and SameSite=Lax or Strict
   (to blunt CSRF). Review each cookies().set call nearby to confirm all
   three flags are present on session/auth tokens.
-fix_strategy: suggest_only
+fix_strategy: set_cookie_flags

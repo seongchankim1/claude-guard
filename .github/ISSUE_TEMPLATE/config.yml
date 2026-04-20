@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability in claude-guard itself
+    url: https://github.com/your-org/claude-guard/security/advisories/new
+    about: Use a private security advisory, not a public issue.

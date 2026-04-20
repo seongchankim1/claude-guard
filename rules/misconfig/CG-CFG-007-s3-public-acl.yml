@@ -1,0 +1,20 @@
+id: CG-CFG-007
+title: "S3 object ACL set to public-read or public-read-write"
+severity: HIGH
+category: misconfig
+patterns:
+  - regex: "ACL\\s*:\\s*[\"'](public-read|public-read-write|authenticated-read)[\"']"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.py"
+      - "**/*.go"
+      - "**/*.rb"
+      - "**/*.tf"
+      - "**/*.yaml"
+      - "**/*.yml"
+context_hint: |
+  Public ACLs on S3 objects expose them to the whole internet. Prefer
+  presigned URLs for user-facing access, keep the bucket private, and
+  enforce that with the account-level S3 public-access block.
+fix_strategy: suggest_only

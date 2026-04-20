@@ -1,0 +1,15 @@
+id: CG-XSS-002
+title: "Vue v-html binding with non-literal expression"
+severity: HIGH
+category: xss
+languages: [javascript, typescript]
+patterns:
+  - regex: "v-html=[\"'][a-zA-Z_][a-zA-Z0-9_\\.]*[\"']"
+    files:
+      - "**/*.vue"
+      - "**/*.html"
+context_hint: |
+  v-html renders raw HTML. If the value comes from user input or a third
+  party, this is XSS. Render as text, or sanitize with a library like
+  DOMPurify before binding.
+fix_strategy: suggest_only
