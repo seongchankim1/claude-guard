@@ -4,7 +4,7 @@ severity: HIGH
 category: misconfig
 languages: [javascript, typescript]
 patterns:
-  - regex: "(fetch|axios\\.(get|post|put|delete))\\s*\\(\\s*(req|request|params|searchParams|body)\\.(query|body|searchParams|params)"
+  - regex: "(fetch|axios\\.(get|post|put|delete))\\s*\\([^)]{0,200}\\.(searchParams|query|body|params)"
     files:
       - "**/*.ts"
       - "**/*.js"

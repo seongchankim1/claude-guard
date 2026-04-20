@@ -1,6 +1,6 @@
 {
   "name": "claude-guard-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "MCP server that audits AI-generated code using real-attacker techniques, then fixes only the items you check.",
   "type": "module",
   "bin": {
@@ -20,7 +20,8 @@
     "schema",
     "README.md",
     "LICENSE",
-    "SECURITY.md"
+    "SECURITY.md",
+    "CHANGELOG.md"
   ],
   "keywords": [
     "mcp",

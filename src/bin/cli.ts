@@ -3,6 +3,8 @@ import { scan } from "../scan.js";
 import { renderFindingsMd } from "../findings-md.js";
 import { loadBuiltinRules } from "../rules/loader.js";
 import { scoreFindings, renderScorecardMd } from "../scorecard.js";
+import { scorecardToBadge } from "../badge.js";
+import { renderRulesCatalogMd } from "../rules-catalog.js";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, resolve } from "path";
@@ -14,11 +16,13 @@ Usage:
   claude-guard scan [path]           Run scan (default: cwd)
   claude-guard list [path]           Render findings.md for latest scan
   claude-guard score [path]          Show grade/score for latest scan
+  claude-guard badge [path]          Emit shields.io endpoint JSON for the latest scan
   claude-guard explain <id> [path]   Show details for a finding
   claude-guard rules                 List active builtin rules
+  claude-guard docs                  Print a markdown catalogue of every active rule
   claude-guard --help                This message
 
-All commands operate on <path> (or current working directory) and require a prior scan for list/score/explain.
+All commands operate on <path> (or current working directory) and require a prior scan for list/score/badge/explain.
 `;
 
 async function main(argv: string[]): Promise<number> {
@@ -85,6 +89,25 @@ async function main(argv: string[]): Promise<number> {
     const findings = await loadFindings(projectPath, sid);
     const card = scoreFindings(findings);
     process.stdout.write(renderScorecardMd(card));
+    return 0;
+  }
+
+  if (cmd === "badge") {
+    const projectPath = resolve(rest[0] ?? ".");
+    const sid = await latestScanId(projectPath);
+    if (!sid) {
+      process.stderr.write("No scans yet. Run `claude-guard scan` first.\n");
+      return 1;
+    }
+    const findings = await loadFindings(projectPath, sid);
+    const card = scoreFindings(findings);
+    process.stdout.write(JSON.stringify(scorecardToBadge(card), null, 2) + "\n");
+    return 0;
+  }
+
+  if (cmd === "docs") {
+    const rules = await loadBuiltinRules();
+    process.stdout.write(renderRulesCatalogMd(rules));
     return 0;
   }
 

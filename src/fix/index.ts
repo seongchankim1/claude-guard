@@ -2,6 +2,7 @@ import type { Finding } from "../types.js";
 import { renameEnvVar } from "./rename-env-var.js";
 import { suggestOnly } from "./suggest-only.js";
 import { setCookieFlags } from "./set-cookie-flags.js";
+import { splitServerOnly } from "./split-server-only.js";
 
 export type { Finding };
 
@@ -22,6 +23,8 @@ export async function applyFix(
       return renameEnvVar(projectPath, f);
     case "set_cookie_flags":
       return setCookieFlags(projectPath, f);
+    case "split_server_only":
+      return splitServerOnly(projectPath, f);
     case "suggest_only":
     case undefined:
     default:

@@ -46,8 +46,12 @@ Or, for Claude Desktop, add to `claude_desktop_config.json`:
 npx -y claude-guard-mcp   # starts the MCP server
 npx claude-guard scan     # one-shot CLI scan of the current directory
 npx claude-guard score    # grade for the latest scan
-npx claude-guard rules    # list active builtin rules
+npx claude-guard badge    # shields.io endpoint JSON (for a README badge)
+npx claude-guard rules    # list active builtin rules by category
+npx claude-guard docs     # print the full rule catalogue as markdown
 ```
+
+The `scan` command exits `0` on clean, `2` when CRITICAL findings exist — handy for CI.
 
 ## Usage
 

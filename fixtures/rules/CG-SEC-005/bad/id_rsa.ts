@@ -1,0 +1,3 @@
+export const KEY = `-----BEGIN RSA PRIVATE KEY-----
+FAKEKEYCONTENT
+-----END RSA PRIVATE KEY-----`;
