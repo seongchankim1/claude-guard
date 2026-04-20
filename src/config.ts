@@ -10,6 +10,7 @@ export const defaultConfig: Config = {
   engines: { semgrep: "auto", trivy: "auto", gitleaks: "auto" },
   plugins: { allowed: [] },
   severity_threshold: "LOW",
+  severity_overrides: {},
   fix: { dry_run_default: false, require_clean_tree: true },
   redteam: { enabled: false, allowed_targets: ["localhost"] },
 };

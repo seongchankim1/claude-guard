@@ -7,13 +7,14 @@
 ![mcp](https://img.shields.io/badge/MCP-stdio-purple)
 
 - One-line install. **Zero API keys. Zero network calls by default. Zero outbound telemetry.**
-- **42 builtin rules** across secrets, SQL/NoSQL injection, XSS, auth, LLM-specific risks, misconfiguration, Docker, and IaC. Detects across **10 languages** via an optional Semgrep adapter.
+- **50 builtin rules** across secrets, SQL/NoSQL injection, XSS, auth, LLM-specific risks, misconfiguration, Docker, and IaC. Detects across **10 languages** via an optional Semgrep adapter.
 - **SARIF 2.1.0 export** — drop findings straight into the GitHub Security tab via `github/codeql-action/upload-sarif`.
 - **Security scorecard.** Every scan produces a 0–100 score and an A+…F grade, rendered at the top of `findings.md` and available as its own MCP tool, CLI command, and shields.io-compatible endpoint badge.
 - **Checkbox-based approval.** `claude-guard` writes a `findings.md` grouped by severity. You toggle `[x]` on the items you want fixed, then run `apply_fixes`. Nothing else is touched.
 - **Four AST-based auto-fixes** via `ts-morph`: `set_cookie_flags` (inject missing `httpOnly`/`Secure`/`SameSite`), `split_server_only` (prepend `import "server-only"` to files with leaked service-role clients), `parameterize_query` (rewrite Prisma `$queryRawUnsafe` to the tagged-template safe form), `wrap_with_authz_guard` (inject an `await auth()` / `throw if !session` guard into every exported async Server Action). Everything else lands as an inline annotation for human review.
 - **Diff mode**: `scan --diff=main` scans only files changed vs a base ref, so PR gates stay fast even on large repos.
-- **Ignore system**: commit a `.claude-guard/ignore.yml` to suppress specific findings by `rule_id`, `file`, or `line` — wildcards and directory prefixes supported.
+- **Ignore system**: commit a `.claude-guard/ignore.yml` to suppress specific findings by `rule_id`, `file`, or `line` — wildcards and directory prefixes supported. Or drop in an inline `// claude-guard-disable-next-line CG-XXX-NNN` comment right where the finding lives — same shape as `eslint-disable-next-line`.
+- **Severity overrides**: `config.yaml` `severity_overrides` lets a team demote or promote individual rules without forking.
 - **HTML report** (`claude-guard report`): self-contained, grade-colored, collapsible. Attach to a PR comment and you have an instant artifact reviewers can read.
 - **Community plugins.** `config.yaml` `plugins.allowed` loads rule packages from `node_modules`. Plugins are YAML-only by design — no code execution on the plugin surface.
 - **Watch mode** (`claude-guard watch`) — live scorecard line on every file save.
@@ -112,18 +113,18 @@ In any MCP client, in plain language:
 
 ## Builtin rules
 
-**42 rules** across eight categories, targeting the failure modes we see most often in AI-generated web code:
+**50 rules** across eight categories, targeting the failure modes we see most often in AI-generated web code:
 
 | category | count | example rules |
 |---|---|---|
-| `secrets` | 8 | `NEXT_PUBLIC_*` secret names, literal API keys, Supabase `service_role` in client-reachable files, AWS access keys, private-key PEM blocks, committed `.env`, Slack webhooks, committed GCP service-account JSON |
+| `secrets` | 9 | `NEXT_PUBLIC_*` secret names, literal API keys, Supabase `service_role` client-side, AWS access keys, private-key PEM, committed `.env`, Slack webhooks, committed GCP service-account JSON, Stripe live keys |
 | `sql` | 5 | SQL string concatenation, Prisma `$queryRawUnsafe` / `$executeRawUnsafe`, Knex `.raw()` interpolation, Python f-string queries, MongoDB `$where` |
 | `xss` | 4 | React `dangerouslySetInnerHTML`, Vue `v-html`, direct `innerHTML` assignment, `href="javascript:…"` sinks |
-| `auth` | 6 | Hardcoded JWT secret, missing cookie flags, low-round bcrypt, MD5/SHA1 password hashing, `jwt.decode` without verify, `Math.random` for tokens/secrets |
-| `llm` | 5 | User input merged into system prompt, `eval` on LLM output, client-side LLM SDK with a visible key, tool params into shell/file IO, LLM output rendered as raw HTML |
-| `misconfig` | 10 | CORS `*`, Supabase RLS off, Firebase `if true`, open redirect, Express without `helmet`, Next.js Server Action with no auth, S3 public ACL, SSRF from request input, cloud-metadata IP fetch, user-driven iframe `src` |
+| `auth` | 7 | Hardcoded JWT secret, missing cookie flags, low-round bcrypt, MD5/SHA1 password hashing, `jwt.decode` without verify, `Math.random` for tokens, OAuth without `state` |
+| `llm` | 6 | User input in system prompt, `eval` on LLM output, client-side LLM SDK with a visible key, tool params into shell/file IO, LLM output rendered as raw HTML, system prompt in client-reachable module |
+| `misconfig` | 13 | CORS `*`, Supabase RLS off, Firebase `if true`, open redirect, Express without `helmet`, Next.js Server Action with no auth, S3 public ACL, SSRF from request input, cloud-metadata IP fetch, user-driven iframe `src`, missing CSP, path traversal via request input, Django `DEBUG = True` |
 | `docker` | 2 | Dockerfile `FROM :latest` / untagged, `apt-get install` without `--no-install-recommends` |
-| `iac` | 2 | Terraform security group `0.0.0.0/0`, Terraform public S3 ACL |
+| `iac` | 4 | Terraform security group `0.0.0.0/0`, Terraform public S3 ACL, Kubernetes `hostPath`, Kubernetes `privileged: true` |
 
 Call `list_checks` or `claude-guard rules` to see the full active catalogue. Rules are YAML — `rules/<category>/CG-XXX-NNN-slug.yml`. Contributions welcome.
 

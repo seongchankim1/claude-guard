@@ -1,0 +1,16 @@
+id: CG-CFG-012
+title: "File read with path joined from request input"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "(readFile|readFileSync|createReadStream)\\s*\\(\\s*(path\\.)?join\\s*\\([^)]*(req|request|params|body|searchParams)\\."
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Joining a user-controlled path fragment onto a base dir leaves you
+  open to path traversal (../). Resolve the final path, confirm it still
+  starts with the base directory, and reject if it does not. Better,
+  use a strict allowlist.
+fix_strategy: suggest_only

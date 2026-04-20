@@ -79,6 +79,7 @@ export interface Config {
   };
   plugins: { allowed: string[] };
   severity_threshold: Severity;
+  severity_overrides: Record<string, Severity>;
   fix: { dry_run_default: boolean; require_clean_tree: boolean };
   redteam: { enabled: boolean; allowed_targets: string[] };
 }

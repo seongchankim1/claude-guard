@@ -10,6 +10,7 @@ import { runSemgrep } from "./engines/l1-semgrep.js";
 import { runGitleaks } from "./engines/l1-gitleaks.js";
 import { changedFiles } from "./diff.js";
 import { loadIgnore, filterIgnored } from "./ignore.js";
+import { filterByInlineDisables } from "./inline-disable.js";
 import type { Finding, Layer, ScanResult, Severity } from "./types.js";
 
 export interface ScanOptions {
@@ -60,6 +61,12 @@ export async function scan(
 
   const ignoreEntries = await loadIgnore(projectPath);
   findings = filterIgnored(findings, ignoreEntries);
+  findings = await filterByInlineDisables(projectPath, findings);
+
+  const overrides = config.severity_overrides ?? {};
+  findings = findings.map((f) =>
+    overrides[f.rule_id] ? { ...f, severity: overrides[f.rule_id] } : f
+  );
 
   const threshold = severityRank(config.severity_threshold);
   const filtered = findings.filter(

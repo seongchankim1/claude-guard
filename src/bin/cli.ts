@@ -7,6 +7,7 @@ import { scorecardToBadge } from "../badge.js";
 import { renderRulesCatalogMd } from "../rules-catalog.js";
 import { findingsToSarif } from "../sarif.js";
 import { renderHtmlReport } from "../html-report.js";
+import { renderJunitXml } from "../junit.js";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, resolve } from "path";
@@ -21,7 +22,8 @@ Usage:
   claude-guard score [path]          Show grade/score for latest scan
   claude-guard badge [path]          Emit shields.io endpoint JSON for the latest scan
   claude-guard sarif [path]          Emit SARIF 2.1.0 for the latest scan (GitHub Code Scanning)
-  claude-guard report [path]         Write a self-contained HTML report to .claude-guard/report.html
+  claude-guard junit [path]          Emit JUnit XML for CI systems that grok it
+  claude-guard report [path] [--open]   Write a self-contained HTML report; --open launches the browser
   claude-guard watch [path]          Rescan on file change (debounced)
   claude-guard explain <id> [path]   Show details for a finding
   claude-guard rules                 List active builtin rules
@@ -140,7 +142,9 @@ async function main(argv: string[]): Promise<number> {
   }
 
   if (cmd === "report") {
-    const projectPath = resolve(rest[0] ?? ".");
+    const positional = rest.filter((s) => !s.startsWith("--"));
+    const open = rest.includes("--open");
+    const projectPath = resolve(positional[0] ?? ".");
     const sid = await latestScanId(projectPath);
     if (!sid) {
       process.stderr.write("No scans yet. Run `claude-guard scan` first.\n");
@@ -152,6 +156,19 @@ async function main(argv: string[]): Promise<number> {
     await mkdir(join(projectPath, ".claude-guard"), { recursive: true });
     await writeFile(outPath, html);
     process.stdout.write(`Wrote ${outPath}\n`);
+    if (open) await openInBrowser(outPath);
+    return 0;
+  }
+
+  if (cmd === "junit") {
+    const projectPath = resolve(rest[0] ?? ".");
+    const sid = await latestScanId(projectPath);
+    if (!sid) {
+      process.stderr.write("No scans yet. Run `claude-guard scan` first.\n");
+      return 1;
+    }
+    const findings = await loadFindings(projectPath, sid);
+    process.stdout.write(renderJunitXml(findings));
     return 0;
   }
 
@@ -195,6 +212,22 @@ async function loadFindings(project: string, sid: string): Promise<Finding[]> {
   const p = join(project, ".claude-guard/scans", sid, "findings.json");
   const j = JSON.parse(await readFile(p, "utf8")) as { findings: Finding[] };
   return j.findings;
+}
+
+async function openInBrowser(path: string): Promise<void> {
+  const { spawn } = await import("child_process");
+  const cmd =
+    process.platform === "darwin"
+      ? "open"
+      : process.platform === "win32"
+      ? "start"
+      : "xdg-open";
+  try {
+    const proc = spawn(cmd, [path], { stdio: "ignore", detached: true });
+    proc.unref();
+  } catch {
+    // non-fatal — user can still open the file manually
+  }
 }
 
 async function runWatch(projectPath: string): Promise<void> {

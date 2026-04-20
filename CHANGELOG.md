@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.0 — 2026-04-20
+
+### Added
+- **Inline disable comments** (like ESLint). Supported forms:
+  - `// claude-guard-disable-next-line CG-SEC-001` — suppress one rule on the next line
+  - `// claude-guard-disable-next-line` — suppress every rule on the next line
+  - `// claude-guard-disable-line CG-SEC-001 CG-AUTH-002` — suppress on the same line
+  - `// claude-guard-disable-file CG-SEC-001` — suppress a rule across the whole file
+  - `// claude-guard-disable-file` — suppress everything in that file
+
+  Accepts either `//` or `#` comment syntax, so the same markers work in JS/TS, Python, Ruby, YAML, Dockerfile.
+- **Rule severity overrides** in `.claude-guard/config.yaml` (`severity_overrides: { CG-CFG-005: LOW }`). Lets teams demote or promote individual rules without forking the YAML rule files.
+- **JUnit XML export** (`claude-guard junit` CLI) — consumable by Jenkins, GitLab, and most CI dashboards that already ingest test results.
+- **`claude-guard report --open`** — writes the HTML and launches the default browser (macOS `open`, Linux `xdg-open`, Windows `start`).
+- **+8 rules**, bringing the total to 50: Kubernetes `hostPath`, Kubernetes `privileged: true`, missing CSP header on Next.js responses, OAuth authorize URL without `state`, path traversal via `path.join` + request input, Django `DEBUG = True`, committed Stripe live key, `SYSTEM_PROMPT` defined in a client-reachable module.
+
 ## 0.5.0 — 2026-04-20
 
 ### Added

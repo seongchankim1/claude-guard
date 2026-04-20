@@ -1,0 +1,15 @@
+id: CG-LLM-006
+title: "System prompt defined in a client-reachable module"
+severity: MEDIUM
+category: llm
+languages: [javascript, typescript]
+patterns:
+  - regex: "(const|let|var)\\s+(SYSTEM_PROMPT|systemPrompt|SYSTEM_MESSAGE)\\s*="
+    files:
+      - "**/*.{ts,js,jsx,tsx,mjs,cjs}"
+context_hint: |
+  If a system prompt is defined in a file that can ship to the client,
+  it ends up in the JS bundle where anyone can read it. Define system
+  prompts in server-only modules (import "server-only") and treat the
+  prompt itself as sensitive IP where applicable.
+fix_strategy: suggest_only

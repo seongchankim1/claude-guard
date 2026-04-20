@@ -1,8 +1,8 @@
 # claude-guard rule catalogue
 
-42 active builtin rules.
+50 active builtin rules.
 
-## Authentication & sessions (6)
+## Authentication & sessions (7)
 
 ### CG-AUTH-001 — JWT signing secret is a short literal
 - **Severity:** HIGH
@@ -58,6 +58,14 @@
 > security-sensitive values. Use crypto.randomBytes / crypto.getRandomValues
 > in Node or browser, and secrets.token_urlsafe / token_bytes in Python.
 
+### CG-AUTH-007 — OAuth authorization URL built without a state parameter
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> An OAuth authorization request without a state parameter is vulnerable
+> to CSRF on the redirect URI. Generate a random nonce per request,
+> store it in the user's session, and verify it in the callback handler.
+
 ## Docker (2)
 
 ### CG-DOCKER-001 — Dockerfile installs packages without --no-install-recommends
@@ -77,78 +85,44 @@
 > you one upstream push away from pulling in a backdoored image. Pin to
 > an explicit digest or a tagged release you've verified.
 
-## Secrets (8)
+## Infrastructure as code (4)
 
-### CG-SEC-001 — NEXT_PUBLIC_* env var appears to hold a secret
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `rename_env_var`
-
-> NEXT_PUBLIC_ prefixed variables are inlined into the client bundle.
-> A name like *_SECRET / *_KEY / *_TOKEN / *_PASSWORD suggests a credential
-> that must never reach the browser. Rename without the NEXT_PUBLIC_ prefix
-> and access it only from server code.
-
-### CG-SEC-002 — Hardcoded API key or token literal
+### CG-IAC-001 — Terraform security group allows 0.0.0.0/0
 - **Severity:** CRITICAL
 - **Fix strategy:** `suggest_only`
 
-> Literal credentials embedded in source leak via git history, npm tarballs,
-> and CI logs. Rotate immediately, then move the secret behind an env var
-> or secret manager.
+> A 0.0.0.0/0 ingress/egress rule means the whole internet can reach (or
+> be reached by) that resource. Restrict to an explicit CIDR, or if
+> public access is required, move the resource behind a load balancer or
+> WAF and narrow the port range.
 
-### CG-SEC-003 — Supabase service_role key used where it may reach the client
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `split_server_only`
-
-> The Supabase service_role key bypasses Row Level Security. It must only
-> exist in server code (route handlers, server actions, edge runtime with
-> "server-only" import). Any client-reachable module that references it is
-> a full database compromise waiting to happen.
-
-### CG-SEC-004 — AWS access key ID embedded in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> AWS access key IDs follow AKIA* in production or ASIA* for session
-> tokens. If this is a real key, rotate it immediately via the IAM
-> console, scrub git history, and move it behind AWS Secrets Manager or
-> Parameter Store.
-
-### CG-SEC-005 — Private key material embedded in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Private keys in source are a guaranteed leak via git, CI logs, and npm
-> tarballs. Generate a new key pair, distribute the new public key, and
-> retire the leaked one.
-
-### CG-SEC-006 — Real .env file (not .env.example) present in repo
+### CG-IAC-002 — Terraform S3 bucket ACL is public-read or public-read-write
 - **Severity:** HIGH
 - **Fix strategy:** `suggest_only`
 
-> Non-example .env files belong in .gitignore. If this file is committed,
-> assume the secrets inside are leaked and rotate them. Use .env.example
-> with placeholder values for documentation.
+> Public ACLs on S3 buckets expose all object listings and contents to
+> the world. Use presigned URLs, a CloudFront distribution, or a private
+> bucket with scoped IAM policies instead.
 
-### CG-SEC-007 — Slack webhook URL embedded in source
+### CG-IAC-003 — Kubernetes pod uses hostPath volume
 - **Severity:** HIGH
 - **Fix strategy:** `suggest_only`
 
-> Slack webhooks can be used by anyone who sees them. Revoke the webhook,
-> rotate it, and store the replacement in an env var.
+> hostPath volumes mount the node filesystem into the pod, which breaks
+> most multi-tenant isolation guarantees. Prefer persistentVolumeClaims
+> with scoped storage classes, or if you genuinely need node access, use
+> a CSI driver with an explicit access scope.
 
-### CG-SEC-008 — GCP service account JSON key committed in source
+### CG-IAC-004 — Kubernetes container runs privileged
 - **Severity:** CRITICAL
 - **Fix strategy:** `suggest_only`
 
-> Committing a GCP service-account JSON key grants anyone with the file
-> the permissions of that account. Rotate the key in IAM, prefer
-> Workload Identity or OIDC federation, and store any key material in a
-> secret manager.
+> A privileged container can escape to the host. Unless you're writing a
+> host-level DaemonSet with a specific reason, set securityContext:
+> privileged: false, drop ALL capabilities, and add only the ones you
+> truly need.
 
-## Misconfiguration (10)
+## Misconfiguration (13)
 
 ### CG-CFG-001 — CORS Access-Control-Allow-Origin set to '*'
 - **Severity:** HIGH
@@ -239,26 +213,37 @@
 > clickjacking, and phishing via a familiar-looking wrapper. Restrict to
 > an explicit allowlist of origins, and set sandbox attributes.
 
-## Infrastructure as code (2)
-
-### CG-IAC-001 — Terraform security group allows 0.0.0.0/0
-- **Severity:** CRITICAL
+### CG-CFG-011 — Next.js response writes no Content-Security-Policy header
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> A 0.0.0.0/0 ingress/egress rule means the whole internet can reach (or
-> be reached by) that resource. Restrict to an explicit CIDR, or if
-> public access is required, move the resource behind a load balancer or
-> WAF and narrow the port range.
+> Content-Security-Policy is the most effective in-depth defense against
+> XSS once it lands. Ship a strict policy via middleware or next.config
+> headers; script-src with a nonce and default-src 'self' is a good
+> starting point.
 
-### CG-IAC-002 — Terraform S3 bucket ACL is public-read or public-read-write
+### CG-CFG-012 — File read with path joined from request input
 - **Severity:** HIGH
+- **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> Public ACLs on S3 buckets expose all object listings and contents to
-> the world. Use presigned URLs, a CloudFront distribution, or a private
-> bucket with scoped IAM policies instead.
+> Joining a user-controlled path fragment onto a base dir leaves you
+> open to path traversal (../). Resolve the final path, confirm it still
+> starts with the base directory, and reject if it does not. Better,
+> use a strict allowlist.
 
-## LLM / AI-specific risks (5)
+### CG-CFG-013 — Django DEBUG = True in settings
+- **Severity:** HIGH
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> DEBUG = True in production leaks stack traces, env vars, and source
+> paths to any visitor who hits an error route. Read DEBUG from an env
+> var with a strict default of False, and only flip it on in a
+> development-only settings override.
+
+## LLM / AI-specific risks (6)
 
 ### CG-LLM-001 — User input interpolated into a system/role prompt
 - **Severity:** HIGH
@@ -308,44 +293,15 @@
 > (prompt injection, RAG poisoning). Render as text, or run through a
 > HTML sanitizer like DOMPurify before inserting.
 
-## Cross-site scripting (4)
-
-### CG-XSS-001 — dangerouslySetInnerHTML with a dynamic expression
-- **Severity:** HIGH
+### CG-LLM-006 — System prompt defined in a client-reachable module
+- **Severity:** MEDIUM
 - **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> Passing non-literal HTML to dangerouslySetInnerHTML is XSS unless the
-> string is produced by a trusted sanitizer (for example DOMPurify).
-> Prefer rendering the content as text, or sanitize explicitly with a
-> dependency you trust and keep updated.
-
-### CG-XSS-002 — Vue v-html binding with non-literal expression
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> v-html renders raw HTML. If the value comes from user input or a third
-> party, this is XSS. Render as text, or sanitize with a library like
-> DOMPurify before binding.
-
-### CG-XSS-003 — element.innerHTML = dynamic_expression
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Assigning a non-literal to innerHTML parses the string as HTML. Prefer
-> textContent, or sanitize the value with a trusted library before it
-> reaches the DOM.
-
-### CG-XSS-004 — href / src set to javascript: scheme
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> javascript: URLs execute in the origin of the rendering page. If the
-> value is ever attacker-controlled, it becomes XSS. Avoid
-> javascript: entirely; for dynamic navigation use event handlers.
+> If a system prompt is defined in a file that can ship to the client,
+> it ends up in the JS bundle where anyone can read it. Define system
+> prompts in server-only modules (import "server-only") and treat the
+> prompt itself as sensitive IP where applicable.
 
 ## SQL / NoSQL injection (5)
 
@@ -391,3 +347,122 @@
 > Python's f-strings and .format() assemble the final string before the
 > DB driver sees it, so bind parameters are lost. Pass parameters as a
 > tuple or dict in the second argument to execute().
+
+## Secrets (9)
+
+### CG-SEC-001 — NEXT_PUBLIC_* env var appears to hold a secret
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `rename_env_var`
+
+> NEXT_PUBLIC_ prefixed variables are inlined into the client bundle.
+> A name like *_SECRET / *_KEY / *_TOKEN / *_PASSWORD suggests a credential
+> that must never reach the browser. Rename without the NEXT_PUBLIC_ prefix
+> and access it only from server code.
+
+### CG-SEC-002 — Hardcoded API key or token literal
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Literal credentials embedded in source leak via git history, npm tarballs,
+> and CI logs. Rotate immediately, then move the secret behind an env var
+> or secret manager.
+
+### CG-SEC-003 — Supabase service_role key used where it may reach the client
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `split_server_only`
+
+> The Supabase service_role key bypasses Row Level Security. It must only
+> exist in server code (route handlers, server actions, edge runtime with
+> "server-only" import). Any client-reachable module that references it is
+> a full database compromise waiting to happen.
+
+### CG-SEC-004 — AWS access key ID embedded in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> AWS access key IDs follow AKIA* in production or ASIA* for session
+> tokens. If this is a real key, rotate it immediately via the IAM
+> console, scrub git history, and move it behind AWS Secrets Manager or
+> Parameter Store.
+
+### CG-SEC-005 — Private key material embedded in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Private keys in source are a guaranteed leak via git, CI logs, and npm
+> tarballs. Generate a new key pair, distribute the new public key, and
+> retire the leaked one.
+
+### CG-SEC-006 — Real .env file (not .env.example) present in repo
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> Non-example .env files belong in .gitignore. If this file is committed,
+> assume the secrets inside are leaked and rotate them. Use .env.example
+> with placeholder values for documentation.
+
+### CG-SEC-007 — Slack webhook URL embedded in source
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> Slack webhooks can be used by anyone who sees them. Revoke the webhook,
+> rotate it, and store the replacement in an env var.
+
+### CG-SEC-008 — GCP service account JSON key committed in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Committing a GCP service-account JSON key grants anyone with the file
+> the permissions of that account. Rotate the key in IAM, prefer
+> Workload Identity or OIDC federation, and store any key material in a
+> secret manager.
+
+### CG-SEC-009 — Stripe live secret key (sk_live_…) appears in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> A Stripe live secret key in source has direct financial consequences:
+> anyone who reads the file can issue charges or refunds. Rotate via
+> the Stripe dashboard immediately, move the key to your secret
+> manager, and audit the account for unexpected API calls.
+
+## Cross-site scripting (4)
+
+### CG-XSS-001 — dangerouslySetInnerHTML with a dynamic expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Passing non-literal HTML to dangerouslySetInnerHTML is XSS unless the
+> string is produced by a trusted sanitizer (for example DOMPurify).
+> Prefer rendering the content as text, or sanitize explicitly with a
+> dependency you trust and keep updated.
+
+### CG-XSS-002 — Vue v-html binding with non-literal expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> v-html renders raw HTML. If the value comes from user input or a third
+> party, this is XSS. Render as text, or sanitize with a library like
+> DOMPurify before binding.
+
+### CG-XSS-003 — element.innerHTML = dynamic_expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Assigning a non-literal to innerHTML parses the string as HTML. Prefer
+> textContent, or sanitize the value with a trusted library before it
+> reaches the DOM.
+
+### CG-XSS-004 — href / src set to javascript: scheme
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> javascript: URLs execute in the origin of the rendering page. If the
+> value is ever attacker-controlled, it becomes XSS. Avoid
+> javascript: entirely; for dynamic navigation use event handlers.

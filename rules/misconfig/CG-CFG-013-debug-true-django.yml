@@ -1,0 +1,16 @@
+id: CG-CFG-013
+title: "Django DEBUG = True in settings"
+severity: HIGH
+category: misconfig
+languages: [python]
+patterns:
+  - regex: "^DEBUG\\s*=\\s*True"
+    files:
+      - "**/settings.py"
+      - "**/settings/*.py"
+context_hint: |
+  DEBUG = True in production leaks stack traces, env vars, and source
+  paths to any visitor who hits an error route. Read DEBUG from an env
+  var with a strict default of False, and only flip it on in a
+  development-only settings override.
+fix_strategy: suggest_only
