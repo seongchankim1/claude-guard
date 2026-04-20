@@ -1,0 +1,15 @@
+id: CG-CFG-026
+title: "/debug, /admin, /status, /metrics route reachable without auth"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "app\\.(get|post|use)\\s*\\(\\s*[`'\"]/(debug|admin|status|metrics|_debug|__admin)[`'\"][^)]*function"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Diagnostic / admin endpoints that skip auth are catnip for attackers.
+  Put them behind an auth middleware, gate by internal-IP allowlist, or
+  move them to a separate process exposed only on a private network.
+fix_strategy: suggest_only

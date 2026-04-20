@@ -1,8 +1,8 @@
 # claude-guard rule catalogue
 
-80 active builtin rules.
+90 active builtin rules.
 
-## Authentication & sessions (12)
+## Authentication & sessions (14)
 
 ### CG-AUTH-001 — JWT signing secret is a short literal
 - **Severity:** HIGH
@@ -113,26 +113,27 @@
 > in httpOnly cookies set by the server, and use short expiry + refresh
 > tokens rotated on the server.
 
-## Docker (2)
-
-### CG-DOCKER-001 — Dockerfile installs packages without --no-install-recommends
-- **Severity:** LOW
+### CG-AUTH-013 — Password minLength / length check below 8 characters
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript, python
 - **Fix strategy:** `suggest_only`
 
-> apt-get install without --no-install-recommends pulls in optional
-> packages you did not intend to ship, enlarging both the image size
-> and the attack surface. Pass --no-install-recommends and install only
-> what your application actually needs.
+> Minimum password length below 8 is effectively no policy. NIST SP
+> 800-63B recommends a minimum of 8, with no composition requirements,
+> combined with a breach-list check. Bump the minimum and run passwords
+> through a known-leaked check before accepting.
 
-### CG-DOCKER-002 — Dockerfile FROM uses :latest or no tag
-- **Severity:** LOW
+### CG-AUTH-014 — Secret compared with === / == (timing-unsafe)
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> :latest (or an untagged FROM) makes builds non-reproducible and leaves
-> you one upstream push away from pulling in a backdoored image. Pin to
-> an explicit digest or a tagged release you've verified.
+> String comparison with ===/== short-circuits on the first mismatch,
+> leaking length via timing. For any secret comparison use
+> crypto.timingSafeEqual with Buffers of equal length (and reject
+> length mismatches separately).
 
-## Misconfiguration (25)
+## Misconfiguration (29)
 
 ### CG-CFG-001 — CORS Access-Control-Allow-Origin set to '*'
 - **Severity:** HIGH
@@ -366,7 +367,64 @@
 > allowed fields via Zod or an explicit pick() before handing data to
 > the ORM.
 
-## Infrastructure as code (6)
+### CG-CFG-026 — /debug, /admin, /status, /metrics route reachable without auth
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Diagnostic / admin endpoints that skip auth are catnip for attackers.
+> Put them behind an auth middleware, gate by internal-IP allowlist, or
+> move them to a separate process exposed only on a private network.
+
+### CG-CFG-027 — Error handler returns the full Error object or stack trace to the client
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Stack traces leak file paths, library versions, and sometimes secrets
+> embedded in error messages. Log the full error server-side, send the
+> client a generic message + a correlation id they can use when
+> reporting the issue.
+
+### CG-CFG-028 — express-session without a strong secret or with 'keyboard cat'
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> express-session documentation uses "keyboard cat" as a placeholder;
+> an attacker who knows the secret can forge session cookies. Load the
+> secret from an env var with a strict minimum length, and rotate if
+> the placeholder ever shipped to production.
+
+### CG-CFG-029 — Log line includes the whole request body or a user-supplied object
+- **Severity:** LOW
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Logging an entire request body eventually logs passwords, tokens, and
+> PII. Log a summary, redact sensitive keys, and keep the raw payload
+> only in a short-lived, access-controlled debug log.
+
+## Docker (2)
+
+### CG-DOCKER-001 — Dockerfile installs packages without --no-install-recommends
+- **Severity:** LOW
+- **Fix strategy:** `suggest_only`
+
+> apt-get install without --no-install-recommends pulls in optional
+> packages you did not intend to ship, enlarging both the image size
+> and the attack surface. Pass --no-install-recommends and install only
+> what your application actually needs.
+
+### CG-DOCKER-002 — Dockerfile FROM uses :latest or no tag
+- **Severity:** LOW
+- **Fix strategy:** `suggest_only`
+
+> :latest (or an untagged FROM) makes builds non-reproducible and leaves
+> you one upstream push away from pulling in a backdoored image. Pin to
+> an explicit digest or a tagged release you've verified.
+
+## Infrastructure as code (7)
 
 ### CG-IAC-001 — Terraform security group allows 0.0.0.0/0
 - **Severity:** CRITICAL
@@ -419,7 +477,15 @@
 > a repo-wide takeover primitive. Start with permissions: read-all at
 > the workflow level and only widen at the job or step that needs it.
 
-## LLM / AI-specific risks (9)
+### CG-IAC-007 — GitHub Actions 'uses:' references a mutable branch or @main
+- **Severity:** MEDIUM
+- **Fix strategy:** `suggest_only`
+
+> Pinning an action to @main means any change in that branch executes
+> inside your CI — including a hostile maintainer update. Pin to a
+> full commit SHA, or at minimum a tagged version you've reviewed.
+
+## LLM / AI-specific risks (10)
 
 ### CG-LLM-001 — User input interpolated into a system/role prompt
 - **Severity:** HIGH
@@ -510,7 +576,18 @@
 > schema AND check the call against an explicit allowlist before
 > running.
 
-## Secrets (12)
+### CG-LLM-010 — Prompt or message body interpolates an env secret directly
+- **Severity:** HIGH
+- **Languages:** javascript, typescript, python
+- **Fix strategy:** `suggest_only`
+
+> Putting a secret into the prompt body means the model provider logs
+> it, any downstream evaluator sees it, and a sufficiently clever
+> prompt injection can echo it back. Never send secrets to the model;
+> if the model needs to authenticate a tool, have the tool handler
+> pull the secret on the server instead.
+
+## Secrets (14)
 
 ### CG-SEC-001 — NEXT_PUBLIC_* env var appears to hold a secret
 - **Severity:** CRITICAL
@@ -617,69 +694,25 @@
 > Swap them for obviously fake strings ("sk-test-FAKE", "AKIA" + zeros)
 > and regenerate snapshots.
 
-## SQL / NoSQL injection (7)
-
-### CG-SQL-001 — SQL string concatenation with a variable
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Concatenating user-controlled data into a raw SQL string is the canonical
-> injection vector. Use parameterized queries, the ORM's safe API, or a
-> tagged-template builder instead.
-
-### CG-SQL-002 — Prisma $queryRawUnsafe / $executeRawUnsafe
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `parameterize_query`
-
-> Prefer the tagged-template form `$queryRaw\u0060...\u0060`, which parameterizes
-> interpolations. The Unsafe variants concatenate strings and are vulnerable
-> to SQL injection the same way manual concatenation is.
-
-### CG-SQL-003 — MongoDB $where operator with a string
+### CG-SEC-013 — next.config exposes a secret-looking env to the client bundle
 - **Severity:** HIGH
 - **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> MongoDB's $where evaluates JavaScript on the server. Passing user input
-> into it is NoSQL injection. Replace with structured query operators or
-> validate the input as a strict enum before using.
+> next.config's `env:` field inlines values into the client bundle at
+> build time. If the variable name suggests a credential, you've just
+> shipped it to every browser. Access the secret via a server-only
+> path (API route, Server Action, middleware) and drop it from
+> next.config's env.
 
-### CG-SQL-004 — Knex .raw() with template-string interpolation
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
+### CG-SEC-014 — Fully-formed JWT embedded in source
+- **Severity:** HIGH
 - **Fix strategy:** `suggest_only`
 
-> Interpolating into knex.raw() bypasses parameter binding. Pass bindings
-> as the second argument: .raw('? ... ?', [value1, value2]).
-
-### CG-SQL-005 — Python f-string or .format() composing a SQL query
-- **Severity:** CRITICAL
-- **Languages:** python
-- **Fix strategy:** `suggest_only`
-
-> Python's f-strings and .format() assemble the final string before the
-> DB driver sees it, so bind parameters are lost. Pass parameters as a
-> tuple or dict in the second argument to execute().
-
-### CG-SQL-006 — SQLAlchemy text() composed with f-string or .format()
-- **Severity:** CRITICAL
-- **Languages:** python
-- **Fix strategy:** `suggest_only`
-
-> text() evaluates the final string as SQL. If you build it with an
-> f-string or .format(), injection is back. Use bindparams: text("...
-> WHERE id = :id").bindparams(id=id) or stick to the expression
-> language.
-
-### CG-SQL-007 — Django raw() composed with f-string or .format()
-- **Severity:** CRITICAL
-- **Languages:** python
-- **Fix strategy:** `suggest_only`
-
-> Django's QuerySet.raw() takes optional params; pass them separately
-> rather than formatting user input into the SQL string. .raw("SELECT
-> ... WHERE id = %s", [id]) is safe; an f-string is not.
+> A JWT found at rest in a source file is either leaked production
+> credential material or a tempting target for supply-chain attackers.
+> Rotate the signing key immediately, revoke and re-issue tokens, and
+> store any JWT test fixtures with obviously fake payloads.
 
 ## Cross-site scripting (7)
 
@@ -744,3 +777,67 @@
 > eval/new Function on a template literal is almost always executing an
 > attacker-controlled string. Parse the input into structured data and
 > dispatch on known cases instead.
+
+## SQL / NoSQL injection (7)
+
+### CG-SQL-001 — SQL string concatenation with a variable
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Concatenating user-controlled data into a raw SQL string is the canonical
+> injection vector. Use parameterized queries, the ORM's safe API, or a
+> tagged-template builder instead.
+
+### CG-SQL-002 — Prisma $queryRawUnsafe / $executeRawUnsafe
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `parameterize_query`
+
+> Prefer the tagged-template form `$queryRaw\u0060...\u0060`, which parameterizes
+> interpolations. The Unsafe variants concatenate strings and are vulnerable
+> to SQL injection the same way manual concatenation is.
+
+### CG-SQL-003 — MongoDB $where operator with a string
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> MongoDB's $where evaluates JavaScript on the server. Passing user input
+> into it is NoSQL injection. Replace with structured query operators or
+> validate the input as a strict enum before using.
+
+### CG-SQL-004 — Knex .raw() with template-string interpolation
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Interpolating into knex.raw() bypasses parameter binding. Pass bindings
+> as the second argument: .raw('? ... ?', [value1, value2]).
+
+### CG-SQL-005 — Python f-string or .format() composing a SQL query
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> Python's f-strings and .format() assemble the final string before the
+> DB driver sees it, so bind parameters are lost. Pass parameters as a
+> tuple or dict in the second argument to execute().
+
+### CG-SQL-006 — SQLAlchemy text() composed with f-string or .format()
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> text() evaluates the final string as SQL. If you build it with an
+> f-string or .format(), injection is back. Use bindparams: text("...
+> WHERE id = :id").bindparams(id=id) or stick to the expression
+> language.
+
+### CG-SQL-007 — Django raw() composed with f-string or .format()
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> Django's QuerySet.raw() takes optional params; pass them separately
+> rather than formatting user input into the SQL string. .raw("SELECT
+> ... WHERE id = %s", [id]) is safe; an f-string is not.

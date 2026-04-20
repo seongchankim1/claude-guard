@@ -1,0 +1,19 @@
+id: CG-CFG-027
+title: "Error handler returns the full Error object or stack trace to the client"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "(\\.json|\\.send)\\s*\\([^)]*\\b(err\\.stack|error\\.stack|e\\.stack)\\b"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+  - regex: "NextResponse\\.json\\s*\\([^)]*\\b(err\\.stack|error\\.stack)\\b"
+    files:
+      - "**/*.ts"
+context_hint: |
+  Stack traces leak file paths, library versions, and sometimes secrets
+  embedded in error messages. Log the full error server-side, send the
+  client a generic message + a correlation id they can use when
+  reporting the issue.
+fix_strategy: suggest_only

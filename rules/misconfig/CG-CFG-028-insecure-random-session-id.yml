@@ -1,0 +1,16 @@
+id: CG-CFG-028
+title: "express-session without a strong secret or with 'keyboard cat'"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "session\\s*\\(\\s*\\{[^}]{0,200}secret\\s*:\\s*[\"'](keyboard cat|secret|changeme|default)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  express-session documentation uses "keyboard cat" as a placeholder;
+  an attacker who knows the secret can forge session cookies. Load the
+  secret from an env var with a strict minimum length, and rotate if
+  the placeholder ever shipped to production.
+fix_strategy: suggest_only

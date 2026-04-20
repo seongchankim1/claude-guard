@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.0.0 — 2026-04-20
+
+First stable release. Over nine iterations claude-guard has grown from a 10-rule MVP into a full audit tool with 90 rules across eight categories, four AST-based auto-fixes, SARIF/JUnit/HTML export, community plugin loading, a baseline system, and first-class CI integration.
+
+### Added (since 0.9.0)
+- **+10 final rules**, for a total of 90:
+  - `CG-AUTH-013` — password min length under 8
+  - `CG-CFG-026` — public admin/debug/metrics routes with no auth middleware
+  - `CG-CFG-027` — error responses that leak stack traces
+  - `CG-CFG-028` — express-session with a placeholder secret ("keyboard cat")
+  - `CG-SEC-013` — `next.config.js` `env:` bloc exposing a secret-shaped variable
+  - `CG-AUTH-014` — secret comparison via `===` (timing-unsafe)
+  - `CG-CFG-029` — `console.log(req.body)` style logs of arbitrary request bodies
+  - `CG-SEC-014` — fully-formed JWT committed to source
+  - `CG-LLM-010` — secret interpolated directly into a prompt
+  - `CG-IAC-007` — GitHub Actions `uses:` pinned to a mutable branch
+
+### Summary of the 1.0 surface
+
+- **90 builtin rules** across `secrets`, `sql`, `xss`, `auth`, `llm`, `misconfig`, `docker`, `iac` — every rule has positive and negative fixture tests.
+- **Four AST-based auto-fixes**: `rename_env_var`, `set_cookie_flags`, `split_server_only`, `parameterize_query`, `wrap_with_authz_guard`. Everything else is `suggest_only` (inline annotation).
+- **MCP tools**: `scan`, `list_findings`, `explain`, `apply_fixes`, `rollback`, `redteam_probe`, `list_checks`, `init_config`, `score`, `export_sarif`.
+- **CLI**: `scan` (with `--diff=BASE`), `list`, `score`, `badge`, `sarif`, `junit`, `report --open`, `watch`, `rules`, `docs`, `explain`, `install-hooks`, `baseline`, `diff-scans`, `stats`, `init`, `suppress`.
+- **Export formats**: JSON (native), markdown checklist (`findings.md`), HTML (self-contained), SARIF 2.1.0, JUnit XML, shields.io endpoint JSON.
+- **Suppression**: `.claude-guard/ignore.yml`, inline `// claude-guard-disable-*` comments, config-level `severity_overrides`, project baseline.
+- **Safety**: loopback-only red-team probe with DNS rebinding defense + per-finding rate limiting; YAML-only plugin surface (no JS execution); JSON Schema + ReDoS check on every rule at load time.
+- **CI**: GitHub Actions for tests, code scanning (SARIF upload), and tag-triggered npm publish with provenance.
+
 ## 0.9.0 — 2026-04-20
 
 ### Added

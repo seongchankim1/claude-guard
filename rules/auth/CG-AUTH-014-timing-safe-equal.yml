@@ -1,0 +1,16 @@
+id: CG-AUTH-014
+title: "Secret compared with === / == (timing-unsafe)"
+severity: MEDIUM
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "(token|secret|password|apiKey|api_key|hmac|signature)\\s*===?\\s*[a-zA-Z_\"'`]"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  String comparison with ===/== short-circuits on the first mismatch,
+  leaking length via timing. For any secret comparison use
+  crypto.timingSafeEqual with Buffers of equal length (and reject
+  length mismatches separately).
+fix_strategy: suggest_only

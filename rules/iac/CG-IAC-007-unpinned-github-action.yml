@@ -1,0 +1,14 @@
+id: CG-IAC-007
+title: "GitHub Actions 'uses:' references a mutable branch or @main"
+severity: MEDIUM
+category: iac
+patterns:
+  - regex: "uses\\s*:\\s*[^@\\n]+@(main|master|develop|latest)\\b"
+    files:
+      - "**/.github/workflows/**/*.yml"
+      - "**/.github/workflows/**/*.yaml"
+context_hint: |
+  Pinning an action to @main means any change in that branch executes
+  inside your CI — including a hostile maintainer update. Pin to a
+  full commit SHA, or at minimum a tagged version you've reviewed.
+fix_strategy: suggest_only
