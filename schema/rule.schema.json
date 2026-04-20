@@ -7,7 +7,7 @@
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^CG-[A-Z]{2,5}-[0-9]{3}$"
+      "pattern": "^[A-Z][A-Z0-9]{1,15}-[A-Z][A-Z0-9]{1,15}-[0-9]{3,4}$"
     },
     "title": { "type": "string", "minLength": 3 },
     "severity": { "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },

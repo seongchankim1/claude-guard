@@ -5,6 +5,7 @@ import { loadBuiltinRules } from "../rules/loader.js";
 import { scoreFindings, renderScorecardMd } from "../scorecard.js";
 import { scorecardToBadge } from "../badge.js";
 import { renderRulesCatalogMd } from "../rules-catalog.js";
+import { findingsToSarif } from "../sarif.js";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, resolve } from "path";
@@ -17,12 +18,14 @@ Usage:
   claude-guard list [path]           Render findings.md for latest scan
   claude-guard score [path]          Show grade/score for latest scan
   claude-guard badge [path]          Emit shields.io endpoint JSON for the latest scan
+  claude-guard sarif [path]          Emit SARIF 2.1.0 for the latest scan (GitHub Code Scanning)
+  claude-guard watch [path]          Rescan on file change (debounced)
   claude-guard explain <id> [path]   Show details for a finding
   claude-guard rules                 List active builtin rules
   claude-guard docs                  Print a markdown catalogue of every active rule
   claude-guard --help                This message
 
-All commands operate on <path> (or current working directory) and require a prior scan for list/score/badge/explain.
+All commands operate on <path> (or current working directory) and require a prior scan for list/score/badge/sarif/explain.
 `;
 
 async function main(argv: string[]): Promise<number> {
@@ -111,6 +114,25 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
+  if (cmd === "sarif") {
+    const projectPath = resolve(rest[0] ?? ".");
+    const sid = await latestScanId(projectPath);
+    if (!sid) {
+      process.stderr.write("No scans yet. Run `claude-guard scan` first.\n");
+      return 1;
+    }
+    const findings = await loadFindings(projectPath, sid);
+    const rules = await loadBuiltinRules();
+    process.stdout.write(JSON.stringify(findingsToSarif(findings, rules), null, 2) + "\n");
+    return 0;
+  }
+
+  if (cmd === "watch") {
+    const projectPath = resolve(rest[0] ?? ".");
+    await runWatch(projectPath);
+    return 0;
+  }
+
   if (cmd === "explain") {
     const id = rest[0];
     if (!id) {
@@ -151,6 +173,71 @@ async function loadFindings(project: string, sid: string): Promise<Finding[]> {
   const p = join(project, ".claude-guard/scans", sid, "findings.json");
   const j = JSON.parse(await readFile(p, "utf8")) as { findings: Finding[] };
   return j.findings;
+}
+
+async function runWatch(projectPath: string): Promise<void> {
+  const { watch } = await import("fs");
+  let running = false;
+  let pending = false;
+  let timer: NodeJS.Timeout | null = null;
+
+  async function runOnce(reason: string): Promise<void> {
+    if (running) {
+      pending = true;
+      return;
+    }
+    running = true;
+    const t0 = Date.now();
+    try {
+      const r = await scan(projectPath, { layers: ["l2"] });
+      const card = scoreFindings(r.findings);
+      const dur = Date.now() - t0;
+      process.stdout.write(
+        `[${new Date().toISOString()}] (${reason}) ${card.headline} · ${r.finding_count} findings · ${dur}ms\n`
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      process.stderr.write(`watch error: ${msg}\n`);
+    } finally {
+      running = false;
+      if (pending) {
+        pending = false;
+        runOnce("queued");
+      }
+    }
+  }
+
+  await runOnce("initial");
+
+  const skipDirs = new Set([
+    "node_modules",
+    ".git",
+    "dist",
+    "build",
+    ".next",
+    ".claude-guard",
+    "coverage",
+  ]);
+  const watcher = watch(
+    projectPath,
+    { recursive: true },
+    (_event, filename) => {
+      if (!filename) return;
+      const top = String(filename).split(/[\\/]/)[0];
+      if (skipDirs.has(top)) return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => runOnce(`changed: ${filename}`), 250);
+    }
+  );
+  process.on("SIGINT", () => {
+    watcher.close();
+    process.exit(0);
+  });
+
+  process.stdout.write(
+    `watching ${projectPath} — press Ctrl+C to stop\n`
+  );
+  await new Promise(() => {});
 }
 
 main(process.argv.slice(2)).then((code) => {

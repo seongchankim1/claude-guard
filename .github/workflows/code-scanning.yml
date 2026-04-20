@@ -1,0 +1,36 @@
+name: code-scanning
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 4 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  claude-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Scan
+        continue-on-error: true
+        run: |
+          node dist/bin/cli.js scan . > scan-summary.json || true
+          cat scan-summary.json
+      - name: Export SARIF
+        run: node dist/bin/cli.js sarif . > claude-guard.sarif
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: claude-guard.sarif
+          category: claude-guard

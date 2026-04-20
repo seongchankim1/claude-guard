@@ -4,6 +4,7 @@ import { join } from "path";
 import { ensureWorkspace, ensureGitignore } from "./workspace.js";
 import { loadConfig } from "./config.js";
 import { loadBuiltinRules } from "./rules/loader.js";
+import { loadAllowedPlugins } from "./rules/plugin-loader.js";
 import { runL2, dedupe } from "./engines/l2-native.js";
 import { runSemgrep } from "./engines/l1-semgrep.js";
 import { runGitleaks } from "./engines/l1-gitleaks.js";
@@ -35,6 +36,15 @@ export async function scan(
   }
   if (layers.includes("l2")) {
     const rules = await loadBuiltinRules();
+    if (config.plugins.allowed.length > 0) {
+      const pluginResults = await loadAllowedPlugins(
+        projectPath,
+        config.plugins.allowed
+      );
+      for (const p of pluginResults) {
+        rules.push(...p.rules);
+      }
+    }
     all.push(...(await runL2(projectPath, rules)));
   }
   const findings = dedupe(all);

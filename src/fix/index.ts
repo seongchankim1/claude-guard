@@ -3,6 +3,7 @@ import { renameEnvVar } from "./rename-env-var.js";
 import { suggestOnly } from "./suggest-only.js";
 import { setCookieFlags } from "./set-cookie-flags.js";
 import { splitServerOnly } from "./split-server-only.js";
+import { parameterizeQuery } from "./parameterize-query.js";
 
 export type { Finding };
 
@@ -25,6 +26,8 @@ export async function applyFix(
       return setCookieFlags(projectPath, f);
     case "split_server_only":
       return splitServerOnly(projectPath, f);
+    case "parameterize_query":
+      return parameterizeQuery(projectPath, f);
     case "suggest_only":
     case undefined:
     default:

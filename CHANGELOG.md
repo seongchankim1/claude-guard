@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 — 2026-04-20
+
+### Added
+- **SARIF 2.1.0 export** (`claude-guard sarif` CLI + `export_sarif` MCP tool). Upload to GitHub Code Scanning, Sonar, or any SARIF consumer. Includes per-rule metadata and line fingerprints.
+- **GitHub Code Scanning workflow** (`.github/workflows/code-scanning.yml`). Runs on push, PR, and a weekly schedule; uploads SARIF via `github/codeql-action/upload-sarif@v3` so findings appear in the repo Security tab.
+- **Community plugin loader**. `config.yaml` `plugins.allowed` now actually loads rule packages from `node_modules`. Plugins are YAML-only: we read a `claude-guard-plugin.yml` manifest, walk the listed rule directories, and run every rule through JSON Schema + ReDoS validation before accepting it.
+- **Third AST-based fix**: `parameterize_query` rewrites Prisma `$queryRawUnsafe` / `$executeRawUnsafe` calls into the tagged-template safe form. Handles both template-string arguments and `(string, ...params)` calls (converting `$1`/`?` placeholders to `${...}` interpolations).
+- **Watch mode**: `claude-guard watch [path]` rescans on any file change (debounced 250 ms, ignores `node_modules` / `.git` / build output / `.claude-guard`). Outputs a one-line scorecard per iteration — perfect for a second terminal while vibe-coding.
+- **Auto-publish workflow** (`.github/workflows/publish.yml`). On `v*.*.*` tags: runs tests, verifies the tag matches `package.json`, publishes to npm with provenance, and opens a GitHub release with `CHANGELOG.md` body.
+
+### Changed
+- Rule ID schema broadened from `^CG-[A-Z]{2,5}-[0-9]{3}$` to `^[A-Z][A-Z0-9]{1,15}-[A-Z][A-Z0-9]{1,15}-[0-9]{3,4}$` so community plugins can namespace their own rules (e.g. `ACME-NEXT-001`) without forking the schema.
+- `CG-SQL-002` default fix strategy is now `parameterize_query` (was `suggest_only`).
+
 ## 0.3.0 — 2026-04-20
 
 ### Added

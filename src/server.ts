@@ -16,6 +16,7 @@ import { renderStaticPoc } from "./redteam/static-poc.js";
 import { probe } from "./redteam/probe.js";
 import { renderDefaultConfigYaml } from "./config.js";
 import { scoreFindings } from "./scorecard.js";
+import { findingsToSarif } from "./sarif.js";
 import type { Finding } from "./types.js";
 
 const scanArgs = z.object({
@@ -212,6 +213,16 @@ export function buildServer() {
           required: ["project_path"],
         },
       },
+      {
+        name: "export_sarif",
+        description:
+          "Emit SARIF 2.1.0 for the latest scan — upload to GitHub Code Scanning or another SARIF consumer.",
+        inputSchema: {
+          type: "object",
+          properties: { project_path: { type: "string" } },
+          required: ["project_path"],
+        },
+      },
     ],
   }));
 
@@ -340,6 +351,21 @@ export function buildServer() {
         const findings = await loadFindings(a.project_path, sid);
         const card = scoreFindings(findings);
         return text(JSON.stringify(card, null, 2));
+      }
+      if (name === "export_sarif") {
+        const a = initArgs.parse(args);
+        const sid = await latestScanId(a.project_path);
+        if (!sid) return text("No scans yet. Run the `scan` tool first.");
+        const findings = await loadFindings(a.project_path, sid);
+        const rules = await loadBuiltinRules();
+        const sarif = findingsToSarif(findings, rules);
+        const outDir = join(a.project_path, ".claude-guard");
+        await mkdir(outDir, { recursive: true });
+        const outPath = join(outDir, "findings.sarif");
+        await writeFile(outPath, JSON.stringify(sarif, null, 2));
+        return text(
+          `Wrote ${outPath}\n\nUpload to GitHub Code Scanning with:\n  gh api repos/:owner/:repo/code-scanning/sarifs -X POST -F sarif=@${outPath} -F ref=refs/heads/main -F commit_sha=$(git rev-parse HEAD)`
+        );
       }
       return text(`Unknown tool: ${name}`);
     } catch (e) {

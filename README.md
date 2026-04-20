@@ -8,9 +8,12 @@
 
 - One-line install. **Zero API keys. Zero network calls by default. Zero outbound telemetry.**
 - **32 builtin rules** across secrets, SQL/NoSQL injection, XSS, auth, LLM-specific risks, and misconfiguration. Detects across **10 languages** via an optional Semgrep adapter.
-- **Security scorecard.** Every scan produces a 0–100 score and an A+…F grade, rendered at the top of `findings.md` and available as its own MCP tool and CLI command.
+- **SARIF 2.1.0 export** — drop findings straight into the GitHub Security tab via `github/codeql-action/upload-sarif`.
+- **Security scorecard.** Every scan produces a 0–100 score and an A+…F grade, rendered at the top of `findings.md` and available as its own MCP tool, CLI command, and shields.io-compatible endpoint badge.
 - **Checkbox-based approval.** `claude-guard` writes a `findings.md` grouped by severity. You toggle `[x]` on the items you want fixed, then run `apply_fixes`. Nothing else is touched.
-- **AST-based auto-fixes** where an automatic rewrite is safe (e.g. injecting missing `httpOnly`/`Secure`/`SameSite` flags into `cookies().set(...)` via `ts-morph`). Everything else lands as an inline annotation for human review.
+- **Three AST-based auto-fixes** via `ts-morph`: `set_cookie_flags` (inject missing `httpOnly`/`Secure`/`SameSite`), `split_server_only` (prepend `import "server-only"` to files with leaked service-role clients), `parameterize_query` (rewrite Prisma `$queryRawUnsafe` to the tagged-template safe form). Everything else lands as an inline annotation for human review.
+- **Community plugins.** `config.yaml` `plugins.allowed` loads rule packages from `node_modules`. Plugins are YAML-only by design — no code execution on the plugin surface.
+- **Watch mode** (`claude-guard watch`) — live scorecard line on every file save.
 - Opt-in red-team mode runs a proof-of-concept probe against **localhost only**, with DNS-rebinding defense and per-finding rate limiting.
 
 ## Why
@@ -47,11 +50,36 @@ npx -y claude-guard-mcp   # starts the MCP server
 npx claude-guard scan     # one-shot CLI scan of the current directory
 npx claude-guard score    # grade for the latest scan
 npx claude-guard badge    # shields.io endpoint JSON (for a README badge)
+npx claude-guard sarif    # SARIF 2.1.0 for GitHub Code Scanning
 npx claude-guard rules    # list active builtin rules by category
 npx claude-guard docs     # print the full rule catalogue as markdown
+npx claude-guard watch    # continuous rescan on file change (debounced)
 ```
 
 The `scan` command exits `0` on clean, `2` when CRITICAL findings exist — handy for CI.
+
+### GitHub Code Scanning (drop-in)
+
+Add this workflow and findings appear in your repo's Security tab:
+
+```yaml
+# .github/workflows/claude-guard.yml
+name: claude-guard
+on: [push, pull_request]
+permissions: { contents: read, security-events: write }
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npx -y claude-guard-mcp --version  # warms the package
+      - run: npx claude-guard scan . || true
+      - run: npx claude-guard sarif . > claude-guard.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        with: { sarif_file: claude-guard.sarif, category: claude-guard }
+```
 
 ## Usage
 
