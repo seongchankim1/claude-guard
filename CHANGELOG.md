@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0 — 2026-04-20
+
+### Added
+- **Baseline system**. `claude-guard baseline` captures the current scan as a known-good set; subsequent scans filter matching findings and only report *new* ones. Perfect for adopting claude-guard on a mature codebase without being blocked by pre-existing noise. Set `ignore_baseline: true` on scan options to bypass.
+- **Scan diffing**. `claude-guard diff-scans <old> <new>` reports what was introduced, resolved, and unchanged between two scans by content fingerprint. CI-friendly — exits 2 when new findings were introduced.
+- **`claude-guard stats`**. Rule hit frequency (top 10), severity breakdown, category breakdown, top files per rule. Great for understanding where to invest cleanup time.
+- **+10 rules**, for a total of 70: shell exec/spawn with request input, Python `yaml.load` without SafeLoader, Python `pickle.loads`, XXE-prone XML parsers (Java, DOMParser), password/token passed as URL query, kubeconfig with embedded certificate or token, client-side fetch that ships an API key in the body, Svelte `{@html}` with a dynamic expression, Django `.raw()` composed with f-string or `.format()`, TLS certificate verification disabled (`rejectUnauthorized: false` / `NODE_TLS_REJECT_UNAUTHORIZED=0`).
+
+### Changed
+- Scan results now include `baseline_suppressed` — the count of findings filtered by the active baseline.
+
 ## 0.7.0 — 2026-04-20
 
 ### Added

@@ -11,16 +11,19 @@ import { runGitleaks } from "./engines/l1-gitleaks.js";
 import { changedFiles } from "./diff.js";
 import { loadIgnore, filterIgnored } from "./ignore.js";
 import { filterByInlineDisables } from "./inline-disable.js";
+import { loadBaseline, filterAgainstBaseline } from "./baseline.js";
 import type { Finding, Layer, ScanResult, Severity } from "./types.js";
 
 export interface ScanOptions {
   layers?: Layer[];
   diff_base?: string;
+  ignore_baseline?: boolean;
 }
 
 export interface FullScanResult extends ScanResult {
   findings: Finding[];
   outPath: string;
+  baseline_suppressed?: number;
 }
 
 export async function scan(
@@ -68,6 +71,19 @@ export async function scan(
     overrides[f.rule_id] ? { ...f, severity: overrides[f.rule_id] } : f
   );
 
+  let baseline_suppressed = 0;
+  if (!opts.ignore_baseline) {
+    const baseline = await loadBaseline(projectPath);
+    if (baseline) {
+      const { new_findings, suppressed } = filterAgainstBaseline(
+        findings,
+        baseline
+      );
+      findings = new_findings;
+      baseline_suppressed = suppressed;
+    }
+  }
+
   const threshold = severityRank(config.severity_threshold);
   const filtered = findings.filter(
     (f) => severityRank(f.severity) >= threshold
@@ -106,6 +122,7 @@ export async function scan(
     summary_by_severity: summary,
     findings: filtered,
     outPath,
+    baseline_suppressed,
   };
 }
 

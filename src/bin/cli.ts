@@ -9,6 +9,8 @@ import { findingsToSarif } from "../sarif.js";
 import { renderHtmlReport } from "../html-report.js";
 import { renderJunitXml } from "../junit.js";
 import { installGitHook } from "../install-hooks.js";
+import { captureBaseline, loadBaseline, diffFindings } from "../baseline.js";
+import { summarize } from "../stats.js";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, resolve } from "path";
@@ -27,6 +29,9 @@ Usage:
   claude-guard report [path] [--open]   Write a self-contained HTML report; --open launches the browser
   claude-guard watch [path]          Rescan on file change (debounced)
   claude-guard install-hooks [path]  Install a pre-commit hook that blocks CRITICAL findings in staged files
+  claude-guard baseline [path]       Capture current findings as a baseline; future scans only report new ones
+  claude-guard diff-scans <a> <b> [path]   Compare two scan_ids: what was introduced, resolved, unchanged
+  claude-guard stats [path]          Rule hit frequency, top files, category breakdown for the latest scan
   claude-guard explain <id> [path]   Show details for a finding
   claude-guard rules                 List active builtin rules
   claude-guard docs                  Print a markdown catalogue of every active rule
@@ -183,6 +188,61 @@ async function main(argv: string[]): Promise<number> {
     }
     process.stdout.write(`Installed pre-commit hook at ${r.path}${r.reason ? ` (${r.reason})` : ""}\n`);
     return 0;
+  }
+
+  if (cmd === "baseline") {
+    const projectPath = resolve(rest[0] ?? ".");
+    const sid = await latestScanId(projectPath);
+    if (!sid) {
+      process.stderr.write("No scans yet. Run `claude-guard scan` first.\n");
+      return 1;
+    }
+    const findings = await loadFindings(projectPath, sid);
+    const path = await captureBaseline(projectPath, sid, findings);
+    process.stdout.write(
+      `Wrote ${path} — ${findings.length} finding(s) captured as baseline. Future scans will only report NEW findings.\n`
+    );
+    return 0;
+  }
+
+  if (cmd === "stats") {
+    const projectPath = resolve(rest[0] ?? ".");
+    const sid = await latestScanId(projectPath);
+    if (!sid) {
+      process.stderr.write("No scans yet. Run `claude-guard scan` first.\n");
+      return 1;
+    }
+    const findings = await loadFindings(projectPath, sid);
+    process.stdout.write(JSON.stringify(summarize(findings), null, 2) + "\n");
+    return 0;
+  }
+
+  if (cmd === "diff-scans") {
+    const [a, b, ...tail] = rest;
+    if (!a || !b) {
+      process.stderr.write("Usage: claude-guard diff-scans <scan_id_before> <scan_id_after> [path]\n");
+      return 1;
+    }
+    const projectPath = resolve(tail[0] ?? ".");
+    const before = await loadFindings(projectPath, a);
+    const after = await loadFindings(projectPath, b);
+    const d = diffFindings(before, after);
+    process.stdout.write(
+      JSON.stringify(
+        {
+          before_scan_id: a,
+          after_scan_id: b,
+          introduced: d.introduced.length,
+          resolved: d.resolved.length,
+          unchanged: d.unchanged,
+          introduced_list: d.introduced.map((f) => `${f.rule_id} @ ${f.file}:${f.range.startLine}`),
+          resolved_list: d.resolved.map((f) => `${f.rule_id} @ ${f.file}:${f.range.startLine}`),
+        },
+        null,
+        2
+      ) + "\n"
+    );
+    return d.introduced.length > 0 ? 2 : 0;
   }
 
   if (cmd === "explain") {

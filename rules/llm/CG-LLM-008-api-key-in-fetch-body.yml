@@ -1,0 +1,17 @@
+id: CG-LLM-008
+title: "Client-side fetch() sends an API key or secret in the body"
+severity: HIGH
+category: llm
+languages: [javascript, typescript]
+patterns:
+  - regex: "fetch\\s*\\([^)]+\\{[\\s\\S]{0,300}(apiKey|api_key|secret|token)\\s*:\\s*[\"'`]"
+    files:
+      - "**/*.jsx"
+      - "**/*.tsx"
+      - "**/use client*.{js,ts}"
+context_hint: |
+  Browsers will send whatever body you tell them. If an API key is in
+  the fetch body on a client component, the user's browser sees it —
+  often enough the user IS the one you're trying to protect from. Move
+  the call behind a server route and keep the key on the server.
+fix_strategy: suggest_only

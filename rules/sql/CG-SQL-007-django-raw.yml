@@ -1,0 +1,17 @@
+id: CG-SQL-007
+title: "Django raw() composed with f-string or .format()"
+severity: CRITICAL
+category: sql
+languages: [python]
+patterns:
+  - regex: "\\.raw\\s*\\(\\s*f[\"']"
+    files:
+      - "**/*.py"
+  - regex: "\\.raw\\s*\\([^)]*\\.format\\s*\\("
+    files:
+      - "**/*.py"
+context_hint: |
+  Django's QuerySet.raw() takes optional params; pass them separately
+  rather than formatting user input into the SQL string. .raw("SELECT
+  ... WHERE id = %s", [id]) is safe; an f-string is not.
+fix_strategy: suggest_only

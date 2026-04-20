@@ -1,0 +1,14 @@
+id: CG-CFG-019
+title: "Python yaml.load() called without SafeLoader"
+severity: CRITICAL
+category: misconfig
+languages: [python]
+patterns:
+  - regex: "yaml\\.load\\s*\\([^)]*\\)(?!\\s*#.*SafeLoader)"
+    files:
+      - "**/*.py"
+context_hint: |
+  yaml.load() without Loader=SafeLoader allows arbitrary Python object
+  construction, which is remote code execution on untrusted input. Use
+  yaml.safe_load() instead.
+fix_strategy: suggest_only

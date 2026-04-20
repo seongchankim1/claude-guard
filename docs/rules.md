@@ -1,8 +1,27 @@
 # claude-guard rule catalogue
 
-60 active builtin rules.
+70 active builtin rules.
 
-## Authentication & sessions (9)
+## Docker (2)
+
+### CG-DOCKER-001 — Dockerfile installs packages without --no-install-recommends
+- **Severity:** LOW
+- **Fix strategy:** `suggest_only`
+
+> apt-get install without --no-install-recommends pulls in optional
+> packages you did not intend to ship, enlarging both the image size
+> and the attack surface. Pass --no-install-recommends and install only
+> what your application actually needs.
+
+### CG-DOCKER-002 — Dockerfile FROM uses :latest or no tag
+- **Severity:** LOW
+- **Fix strategy:** `suggest_only`
+
+> :latest (or an untagged FROM) makes builds non-reproducible and leaves
+> you one upstream push away from pulling in a backdoored image. Pin to
+> an explicit digest or a tagged release you've verified.
+
+## Authentication & sessions (10)
 
 ### CG-AUTH-001 — JWT signing secret is a short literal
 - **Severity:** HIGH
@@ -85,24 +104,13 @@
 > short access-token windows (15 minutes) paired with a refresh token
 > that is revocable server-side.
 
-## Docker (2)
-
-### CG-DOCKER-001 — Dockerfile installs packages without --no-install-recommends
-- **Severity:** LOW
+### CG-AUTH-010 — Password or token passed as a URL query parameter
+- **Severity:** HIGH
 - **Fix strategy:** `suggest_only`
 
-> apt-get install without --no-install-recommends pulls in optional
-> packages you did not intend to ship, enlarging both the image size
-> and the attack surface. Pass --no-install-recommends and install only
-> what your application actually needs.
-
-### CG-DOCKER-002 — Dockerfile FROM uses :latest or no tag
-- **Severity:** LOW
-- **Fix strategy:** `suggest_only`
-
-> :latest (or an untagged FROM) makes builds non-reproducible and leaves
-> you one upstream push away from pulling in a backdoored image. Pin to
-> an explicit digest or a tagged release you've verified.
+> URL query parameters end up in server logs, referer headers, and
+> browser history. Never pass credentials via the query string — use
+> the Authorization header or a request body over HTTPS.
 
 ## Infrastructure as code (4)
 
@@ -141,7 +149,7 @@
 > privileged: false, drop ALL capabilities, and add only the ones you
 > truly need.
 
-## LLM / AI-specific risks (7)
+## LLM / AI-specific risks (8)
 
 ### CG-LLM-001 — User input interpolated into a system/role prompt
 - **Severity:** HIGH
@@ -211,7 +219,234 @@
 > can abuse to exhaust connection slots. Wire an AbortController that
 > aborts after N seconds or when the client disconnects.
 
-## Misconfiguration (17)
+### CG-LLM-008 — Client-side fetch() sends an API key or secret in the body
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Browsers will send whatever body you tell them. If an API key is in
+> the fetch body on a client component, the user's browser sees it —
+> often enough the user IS the one you're trying to protect from. Move
+> the call behind a server route and keep the key on the server.
+
+## Secrets (11)
+
+### CG-SEC-001 — NEXT_PUBLIC_* env var appears to hold a secret
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `rename_env_var`
+
+> NEXT_PUBLIC_ prefixed variables are inlined into the client bundle.
+> A name like *_SECRET / *_KEY / *_TOKEN / *_PASSWORD suggests a credential
+> that must never reach the browser. Rename without the NEXT_PUBLIC_ prefix
+> and access it only from server code.
+
+### CG-SEC-002 — Hardcoded API key or token literal
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Literal credentials embedded in source leak via git history, npm tarballs,
+> and CI logs. Rotate immediately, then move the secret behind an env var
+> or secret manager.
+
+### CG-SEC-003 — Supabase service_role key used where it may reach the client
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `split_server_only`
+
+> The Supabase service_role key bypasses Row Level Security. It must only
+> exist in server code (route handlers, server actions, edge runtime with
+> "server-only" import). Any client-reachable module that references it is
+> a full database compromise waiting to happen.
+
+### CG-SEC-004 — AWS access key ID embedded in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> AWS access key IDs follow AKIA* in production or ASIA* for session
+> tokens. If this is a real key, rotate it immediately via the IAM
+> console, scrub git history, and move it behind AWS Secrets Manager or
+> Parameter Store.
+
+### CG-SEC-005 — Private key material embedded in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Private keys in source are a guaranteed leak via git, CI logs, and npm
+> tarballs. Generate a new key pair, distribute the new public key, and
+> retire the leaked one.
+
+### CG-SEC-006 — Real .env file (not .env.example) present in repo
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> Non-example .env files belong in .gitignore. If this file is committed,
+> assume the secrets inside are leaked and rotate them. Use .env.example
+> with placeholder values for documentation.
+
+### CG-SEC-007 — Slack webhook URL embedded in source
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> Slack webhooks can be used by anyone who sees them. Revoke the webhook,
+> rotate it, and store the replacement in an env var.
+
+### CG-SEC-008 — GCP service account JSON key committed in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Committing a GCP service-account JSON key grants anyone with the file
+> the permissions of that account. Rotate the key in IAM, prefer
+> Workload Identity or OIDC federation, and store any key material in a
+> secret manager.
+
+### CG-SEC-009 — Stripe live secret key (sk_live_…) appears in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> A Stripe live secret key in source has direct financial consequences:
+> anyone who reads the file can issue charges or refunds. Rotate via
+> the Stripe dashboard immediately, move the key to your secret
+> manager, and audit the account for unexpected API calls.
+
+### CG-SEC-010 — GitHub fine-grained personal access token in source
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> github_pat_* tokens grant repo or org-level API access. Rotate via
+> GitHub settings immediately, scrub git history, and move the token
+> to a secret manager. Prefer GitHub App installation tokens for
+> automation.
+
+### CG-SEC-011 — kubeconfig / cluster-admin token committed
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> A committed kubeconfig with embedded client cert/key or bearer token
+> is cluster-admin-in-git. Rotate the cert/token in the cluster, remove
+> from history, and distribute credentials via short-lived OIDC or
+> sealed-secrets instead.
+
+## Cross-site scripting (6)
+
+### CG-XSS-001 — dangerouslySetInnerHTML with a dynamic expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Passing non-literal HTML to dangerouslySetInnerHTML is XSS unless the
+> string is produced by a trusted sanitizer (for example DOMPurify).
+> Prefer rendering the content as text, or sanitize explicitly with a
+> dependency you trust and keep updated.
+
+### CG-XSS-002 — Vue v-html binding with non-literal expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> v-html renders raw HTML. If the value comes from user input or a third
+> party, this is XSS. Render as text, or sanitize with a library like
+> DOMPurify before binding.
+
+### CG-XSS-003 — element.innerHTML = dynamic_expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Assigning a non-literal to innerHTML parses the string as HTML. Prefer
+> textContent, or sanitize the value with a trusted library before it
+> reaches the DOM.
+
+### CG-XSS-004 — href / src set to javascript: scheme
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> javascript: URLs execute in the origin of the rendering page. If the
+> value is ever attacker-controlled, it becomes XSS. Avoid
+> javascript: entirely; for dynamic navigation use event handlers.
+
+### CG-XSS-005 — target="_blank" anchor without rel="noopener"
+- **Severity:** LOW
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> target="_blank" without rel="noopener" (or noreferrer) lets the opened
+> page call window.opener.location, enabling tabnabbing. Always add rel
+> to external links opened in a new tab.
+
+### CG-XSS-006 — Svelte {@html …} binding with a non-literal expression
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> {@html x} renders the value as raw HTML. If x can reach user input,
+> it's XSS. Render as text (just {x}), or sanitize with DOMPurify first.
+
+## SQL / NoSQL injection (7)
+
+### CG-SQL-001 — SQL string concatenation with a variable
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Concatenating user-controlled data into a raw SQL string is the canonical
+> injection vector. Use parameterized queries, the ORM's safe API, or a
+> tagged-template builder instead.
+
+### CG-SQL-002 — Prisma $queryRawUnsafe / $executeRawUnsafe
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `parameterize_query`
+
+> Prefer the tagged-template form `$queryRaw\u0060...\u0060`, which parameterizes
+> interpolations. The Unsafe variants concatenate strings and are vulnerable
+> to SQL injection the same way manual concatenation is.
+
+### CG-SQL-003 — MongoDB $where operator with a string
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> MongoDB's $where evaluates JavaScript on the server. Passing user input
+> into it is NoSQL injection. Replace with structured query operators or
+> validate the input as a strict enum before using.
+
+### CG-SQL-004 — Knex .raw() with template-string interpolation
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Interpolating into knex.raw() bypasses parameter binding. Pass bindings
+> as the second argument: .raw('? ... ?', [value1, value2]).
+
+### CG-SQL-005 — Python f-string or .format() composing a SQL query
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> Python's f-strings and .format() assemble the final string before the
+> DB driver sees it, so bind parameters are lost. Pass parameters as a
+> tuple or dict in the second argument to execute().
+
+### CG-SQL-006 — SQLAlchemy text() composed with f-string or .format()
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> text() evaluates the final string as SQL. If you build it with an
+> f-string or .format(), injection is back. Use bindparams: text("...
+> WHERE id = :id").bindparams(id=id) or stick to the expression
+> language.
+
+### CG-SQL-007 — Django raw() composed with f-string or .format()
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> Django's QuerySet.raw() takes optional params; pass them separately
+> rather than formatting user input into the SQL string. .raw("SELECT
+> ... WHERE id = %s", [id]) is safe; an f-string is not.
+
+## Misconfiguration (22)
 
 ### CG-CFG-001 — CORS Access-Control-Allow-Origin set to '*'
 - **Severity:** HIGH
@@ -371,194 +606,47 @@
 > print environment variables whose names suggest credentials; for
 > debugging, print only the key *name* and its length.
 
-## Secrets (10)
-
-### CG-SEC-001 — NEXT_PUBLIC_* env var appears to hold a secret
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `rename_env_var`
-
-> NEXT_PUBLIC_ prefixed variables are inlined into the client bundle.
-> A name like *_SECRET / *_KEY / *_TOKEN / *_PASSWORD suggests a credential
-> that must never reach the browser. Rename without the NEXT_PUBLIC_ prefix
-> and access it only from server code.
-
-### CG-SEC-002 — Hardcoded API key or token literal
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Literal credentials embedded in source leak via git history, npm tarballs,
-> and CI logs. Rotate immediately, then move the secret behind an env var
-> or secret manager.
-
-### CG-SEC-003 — Supabase service_role key used where it may reach the client
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `split_server_only`
-
-> The Supabase service_role key bypasses Row Level Security. It must only
-> exist in server code (route handlers, server actions, edge runtime with
-> "server-only" import). Any client-reachable module that references it is
-> a full database compromise waiting to happen.
-
-### CG-SEC-004 — AWS access key ID embedded in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> AWS access key IDs follow AKIA* in production or ASIA* for session
-> tokens. If this is a real key, rotate it immediately via the IAM
-> console, scrub git history, and move it behind AWS Secrets Manager or
-> Parameter Store.
-
-### CG-SEC-005 — Private key material embedded in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Private keys in source are a guaranteed leak via git, CI logs, and npm
-> tarballs. Generate a new key pair, distribute the new public key, and
-> retire the leaked one.
-
-### CG-SEC-006 — Real .env file (not .env.example) present in repo
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> Non-example .env files belong in .gitignore. If this file is committed,
-> assume the secrets inside are leaked and rotate them. Use .env.example
-> with placeholder values for documentation.
-
-### CG-SEC-007 — Slack webhook URL embedded in source
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> Slack webhooks can be used by anyone who sees them. Revoke the webhook,
-> rotate it, and store the replacement in an env var.
-
-### CG-SEC-008 — GCP service account JSON key committed in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Committing a GCP service-account JSON key grants anyone with the file
-> the permissions of that account. Rotate the key in IAM, prefer
-> Workload Identity or OIDC federation, and store any key material in a
-> secret manager.
-
-### CG-SEC-009 — Stripe live secret key (sk_live_…) appears in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> A Stripe live secret key in source has direct financial consequences:
-> anyone who reads the file can issue charges or refunds. Rotate via
-> the Stripe dashboard immediately, move the key to your secret
-> manager, and audit the account for unexpected API calls.
-
-### CG-SEC-010 — GitHub fine-grained personal access token in source
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> github_pat_* tokens grant repo or org-level API access. Rotate via
-> GitHub settings immediately, scrub git history, and move the token
-> to a secret manager. Prefer GitHub App installation tokens for
-> automation.
-
-## Cross-site scripting (5)
-
-### CG-XSS-001 — dangerouslySetInnerHTML with a dynamic expression
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Passing non-literal HTML to dangerouslySetInnerHTML is XSS unless the
-> string is produced by a trusted sanitizer (for example DOMPurify).
-> Prefer rendering the content as text, or sanitize explicitly with a
-> dependency you trust and keep updated.
-
-### CG-XSS-002 — Vue v-html binding with non-literal expression
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> v-html renders raw HTML. If the value comes from user input or a third
-> party, this is XSS. Render as text, or sanitize with a library like
-> DOMPurify before binding.
-
-### CG-XSS-003 — element.innerHTML = dynamic_expression
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Assigning a non-literal to innerHTML parses the string as HTML. Prefer
-> textContent, or sanitize the value with a trusted library before it
-> reaches the DOM.
-
-### CG-XSS-004 — href / src set to javascript: scheme
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> javascript: URLs execute in the origin of the rendering page. If the
-> value is ever attacker-controlled, it becomes XSS. Avoid
-> javascript: entirely; for dynamic navigation use event handlers.
-
-### CG-XSS-005 — target="_blank" anchor without rel="noopener"
-- **Severity:** LOW
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> target="_blank" without rel="noopener" (or noreferrer) lets the opened
-> page call window.opener.location, enabling tabnabbing. Always add rel
-> to external links opened in a new tab.
-
-## SQL / NoSQL injection (6)
-
-### CG-SQL-001 — SQL string concatenation with a variable
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Concatenating user-controlled data into a raw SQL string is the canonical
-> injection vector. Use parameterized queries, the ORM's safe API, or a
-> tagged-template builder instead.
-
-### CG-SQL-002 — Prisma $queryRawUnsafe / $executeRawUnsafe
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `parameterize_query`
-
-> Prefer the tagged-template form `$queryRaw\u0060...\u0060`, which parameterizes
-> interpolations. The Unsafe variants concatenate strings and are vulnerable
-> to SQL injection the same way manual concatenation is.
-
-### CG-SQL-003 — MongoDB $where operator with a string
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> MongoDB's $where evaluates JavaScript on the server. Passing user input
-> into it is NoSQL injection. Replace with structured query operators or
-> validate the input as a strict enum before using.
-
-### CG-SQL-004 — Knex .raw() with template-string interpolation
+### CG-CFG-018 — Shell exec / spawn takes a string built from request input
 - **Severity:** CRITICAL
 - **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> Interpolating into knex.raw() bypasses parameter binding. Pass bindings
-> as the second argument: .raw('? ... ?', [value1, value2]).
+> Passing request data into exec/spawn is RCE. Either don't shell out,
+> or use the array form with a fixed command and argv items validated
+> against a strict allowlist.
 
-### CG-SQL-005 — Python f-string or .format() composing a SQL query
+### CG-CFG-019 — Python yaml.load() called without SafeLoader
 - **Severity:** CRITICAL
 - **Languages:** python
 - **Fix strategy:** `suggest_only`
 
-> Python's f-strings and .format() assemble the final string before the
-> DB driver sees it, so bind parameters are lost. Pass parameters as a
-> tuple or dict in the second argument to execute().
+> yaml.load() without Loader=SafeLoader allows arbitrary Python object
+> construction, which is remote code execution on untrusted input. Use
+> yaml.safe_load() instead.
 
-### CG-SQL-006 — SQLAlchemy text() composed with f-string or .format()
+### CG-CFG-020 — Python pickle.loads / pickle.load on untrusted bytes
 - **Severity:** CRITICAL
 - **Languages:** python
 - **Fix strategy:** `suggest_only`
 
-> text() evaluates the final string as SQL. If you build it with an
-> f-string or .format(), injection is back. Use bindparams: text("...
-> WHERE id = :id").bindparams(id=id) or stick to the expression
-> language.
+> pickle deserialization is remote code execution by design — never
+> unpickle data from an untrusted source. Use JSON or a schema-based
+> serializer (msgspec, pydantic, protobuf) for data you did not create.
+
+### CG-CFG-021 — XML parser created without disabling external entities (XXE)
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> XML parsers default to resolving external entities, which is the
+> classic XXE vector (read /etc/passwd, SSRF the metadata service).
+> Explicitly disable external entities and DTDs. In Java: set the
+> feature "disallow-doctype-decl" to true.
+
+### CG-CFG-022 — TLS certificate verification disabled (rejectUnauthorized: false)
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Turning off TLS verification makes man-in-the-middle attacks trivial.
+> If you genuinely need to talk to a self-signed server, pin the
+> specific CA via the `ca` option, don't accept any certificate.
