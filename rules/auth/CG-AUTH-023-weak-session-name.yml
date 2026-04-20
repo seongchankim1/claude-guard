@@ -1,0 +1,16 @@
+id: CG-AUTH-023
+title: "Session / auth cookie name hardcoded as 'connect.sid'"
+severity: LOW
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "[\"']connect\\.sid[\"']"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  `connect.sid` is the default express-session cookie name and leaks
+  the framework. Fingerprinting isn't a direct vuln but it gives
+  attackers one fewer guess. Pick an opaque name via
+  `session({ name: "sid", ... })`.
+fix_strategy: suggest_only

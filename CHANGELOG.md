@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.8.0 — 2026-04-20
+
+### Added
+- **`claude-guard validate-rule <file.yml>`** — validate a single rule against the JSON Schema + ReDoS guard without loading the full catalog. Useful for plugin authors iterating on YAML.
+- **+5 rules**, for a total of 155:
+  - `CG-CFG-060` — lodash `_.template(req.body.*)` (CVE-prone)
+  - `CG-CFG-061` — Electron `BrowserWindow` with `nodeIntegration: true`
+  - `CG-CFG-062` — Next.js `rewrites()` with an interpolated external destination (open proxy)
+  - `CG-AUTH-023` — `'connect.sid'` cookie name hardcoded (framework fingerprint)
+  - `CG-LLM-017` — LLM assistant output rendered via `dangerouslySetInnerHTML`
+
 ## 1.7.0 — 2026-04-20 — 150-rule milestone
 
 ### Added

@@ -1,0 +1,16 @@
+id: CG-CFG-061
+title: "Electron BrowserWindow with nodeIntegration: true"
+severity: CRITICAL
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "new\\s+BrowserWindow\\s*\\(\\s*\\{[\\s\\S]{0,300}nodeIntegration\\s*:\\s*true"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  nodeIntegration: true gives renderer JavaScript full Node APIs, so
+  any XSS becomes RCE on the user's machine. Set nodeIntegration: false
+  and contextIsolation: true (default since Electron 12), and expose
+  a narrow preload API via contextBridge.
+fix_strategy: suggest_only

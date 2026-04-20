@@ -35,6 +35,7 @@ Usage:
   claude-guard sarif [path]          Emit SARIF 2.1.0 for the latest scan (GitHub Code Scanning)
   claude-guard junit [path]          Emit JUnit XML for CI systems that grok it
   claude-guard csv [path]            Emit findings as CSV (spreadsheet-friendly)
+  claude-guard validate-rule <file>  Validate a single rule YAML against the schema + ReDoS guard
   claude-guard report [path] [--open]   Write a self-contained HTML report; --open launches the browser
   claude-guard watch [path]          Rescan on file change (debounced)
   claude-guard install-hooks [path]  Install a pre-commit hook that blocks CRITICAL findings in staged files
@@ -272,6 +273,33 @@ async function main(argv: string[]): Promise<number> {
     const findings = await loadFindings(projectPath, sid);
     process.stdout.write(renderCsv(findings));
     return 0;
+  }
+
+  if (cmd === "validate-rule") {
+    const file = rest[0];
+    if (!file) {
+      process.stderr.write("Usage: claude-guard validate-rule <rule.yml>\n");
+      return 1;
+    }
+    const { validateRule } = await import("../rules/loader.js");
+    const yaml = await import("js-yaml");
+    try {
+      const content = await readFile(resolve(file), "utf8");
+      const parsed = yaml.default.load(content);
+      const err = validateRule(parsed);
+      if (err) {
+        process.stderr.write(`${color.red("✗")} invalid: ${err}\n`);
+        return 1;
+      }
+      const r = parsed as { id: string; title: string; severity: string; patterns: unknown[] };
+      process.stdout.write(
+        `${color.green("✓")} ${r.id} — ${r.title} (${r.severity}, ${r.patterns.length} pattern(s))\n`
+      );
+      return 0;
+    } catch (e) {
+      process.stderr.write(`claude-guard validate-rule: ${e instanceof Error ? e.message : String(e)}\n`);
+      return 1;
+    }
   }
 
   if (cmd === "install-hooks") {
