@@ -1,0 +1,16 @@
+id: CG-LLM-007
+title: "LLM stream:true call without an AbortController / timeout"
+severity: LOW
+category: llm
+languages: [javascript, typescript]
+patterns:
+  - regex: "stream\\s*:\\s*true"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  A streaming LLM call without an AbortController or a request timeout
+  can hold a server connection open for a long time, which an attacker
+  can abuse to exhaust connection slots. Wire an AbortController that
+  aborts after N seconds or when the client disconnects.
+fix_strategy: suggest_only

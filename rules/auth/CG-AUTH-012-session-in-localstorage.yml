@@ -1,0 +1,18 @@
+id: CG-AUTH-012
+title: "Session or auth token stored in localStorage / sessionStorage"
+severity: MEDIUM
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "localStorage\\.setItem\\s*\\(\\s*[\"'](token|accessToken|auth|jwt|session|refreshToken)"
+    files:
+      - "**/*.{js,ts,jsx,tsx}"
+  - regex: "sessionStorage\\.setItem\\s*\\(\\s*[\"'](token|accessToken|auth|jwt|session|refreshToken)"
+    files:
+      - "**/*.{js,ts,jsx,tsx}"
+context_hint: |
+  localStorage is readable by any script that runs on the page, which
+  means a single XSS escalates to account takeover. Keep auth tokens
+  in httpOnly cookies set by the server, and use short expiry + refresh
+  tokens rotated on the server.
+fix_strategy: suggest_only

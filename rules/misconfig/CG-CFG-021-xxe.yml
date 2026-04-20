@@ -1,0 +1,18 @@
+id: CG-CFG-021
+title: "XML parser created without disabling external entities (XXE)"
+severity: HIGH
+category: misconfig
+patterns:
+  - regex: "DocumentBuilderFactory\\.newInstance\\s*\\(\\s*\\)(?![\\s\\S]{0,300}disallow-doctype-decl)"
+    files:
+      - "**/*.java"
+  - regex: "new\\s+DOMParser\\s*\\(\\s*\\)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  XML parsers default to resolving external entities, which is the
+  classic XXE vector (read /etc/passwd, SSRF the metadata service).
+  Explicitly disable external entities and DTDs. In Java: set the
+  feature "disallow-doctype-decl" to true.
+fix_strategy: suggest_only

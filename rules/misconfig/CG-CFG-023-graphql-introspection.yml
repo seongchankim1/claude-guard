@@ -1,0 +1,16 @@
+id: CG-CFG-023
+title: "GraphQL introspection enabled in production"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "introspection\\s*:\\s*true"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Introspection reveals the entire schema, including internal types an
+  attacker would otherwise have to guess. Disable it in production
+  (introspection: process.env.NODE_ENV !== 'production') unless you
+  genuinely need a public schema.
+fix_strategy: suggest_only

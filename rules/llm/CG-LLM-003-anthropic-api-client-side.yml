@@ -1,0 +1,23 @@
+id: CG-LLM-003
+title: "Anthropic / OpenAI SDK client instantiated with client-visible key"
+severity: CRITICAL
+category: llm
+languages: [javascript, typescript]
+patterns:
+  - regex: "new\\s+(Anthropic|OpenAI)\\s*\\(\\s*\\{[^}]*apiKey\\s*:\\s*process\\.env\\.NEXT_PUBLIC_"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.jsx"
+      - "**/*.tsx"
+  - regex: "new\\s+(Anthropic|OpenAI)\\s*\\(\\s*\\{[^}]*dangerouslyAllowBrowser\\s*:\\s*true"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.jsx"
+      - "**/*.tsx"
+context_hint: |
+  Using an LLM SDK with a NEXT_PUBLIC_ API key or dangerouslyAllowBrowser
+  ships the key to every client. Put the LLM call behind a server route
+  (API route, Server Action, Edge function) and keep the key server-side.
+fix_strategy: suggest_only

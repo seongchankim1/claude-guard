@@ -1,0 +1,16 @@
+id: CG-AUTH-018
+title: "Basic auth middleware uses a hardcoded username/password literal"
+severity: HIGH
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "basicAuth\\s*\\(\\s*\\{[^}]{0,200}users\\s*:\\s*\\{\\s*[\"'][^\"']+[\"']\\s*:\\s*[\"'][^\"']+[\"']"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  express-basic-auth with inline { user: password } pairs ships
+  credentials in source. Read the user list from an env var with a
+  hashed-password lookup, and replace the whole mechanism with session
+  cookies + a real auth provider once you can.
+fix_strategy: suggest_only

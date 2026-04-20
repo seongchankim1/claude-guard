@@ -1,0 +1,16 @@
+id: CG-DOCKER-001
+title: "Dockerfile installs packages without --no-install-recommends"
+severity: LOW
+category: docker
+patterns:
+  - regex: "apt-get\\s+install(?![^\\n]*--no-install-recommends)"
+    files:
+      - "**/Dockerfile"
+      - "**/Dockerfile.*"
+      - "**/*.dockerfile"
+context_hint: |
+  apt-get install without --no-install-recommends pulls in optional
+  packages you did not intend to ship, enlarging both the image size
+  and the attack surface. Pass --no-install-recommends and install only
+  what your application actually needs.
+fix_strategy: suggest_only

@@ -1,0 +1,15 @@
+id: CG-SQL-009
+title: "TypeORM manager.query() with template-literal interpolation"
+severity: CRITICAL
+category: sql
+languages: [javascript, typescript]
+patterns:
+  - regex: "(manager|dataSource|queryRunner|AppDataSource)\\.query\\s*\\(\\s*`[^`]*\\$\\{"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  TypeORM's manager.query() accepts a parameter array as the second
+  argument. Templates interpolate directly into the SQL string and
+  lose binding. Pass parameters: manager.query(`SELECT ... WHERE id=$1`, [id]).
+fix_strategy: suggest_only

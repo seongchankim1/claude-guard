@@ -1,0 +1,17 @@
+id: CG-AUTH-022
+title: "Password-reset response returns the reset token in the body"
+severity: CRITICAL
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "(res\\.json|NextResponse\\.json|Response\\.json)\\s*\\(\\s*\\{[^}]{0,200}(reset|recover|verify)[\\w]*[Tt]oken\\s*"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Returning the reset token in the response body skips the email
+  verification step entirely — anyone who hits the endpoint gets a
+  token they can use. Email the token instead (or link with the token
+  embedded), and reply with 204 regardless of whether the email
+  exists.
+fix_strategy: suggest_only

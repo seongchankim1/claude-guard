@@ -1,0 +1,1 @@
+export const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkphbmUgRG9lIiwiaWF0IjoxNjAwMDAwMDAwfQ.fake_signature_for_demo_only_abc123";

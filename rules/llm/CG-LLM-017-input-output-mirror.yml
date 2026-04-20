@@ -1,0 +1,16 @@
+id: CG-LLM-017
+title: "LLM assistant content rendered via dangerouslySetInnerHTML"
+severity: HIGH
+category: llm
+languages: [javascript, typescript]
+patterns:
+  - regex: "dangerouslySetInnerHTML\\s*=\\s*\\{\\s*\\{\\s*__html\\s*:\\s*(assistant|completion|ai|bot|llm|gpt|claude|message)"
+    files:
+      - "**/*.jsx"
+      - "**/*.tsx"
+context_hint: |
+  Rendering LLM-generated markdown / HTML via dangerouslySetInnerHTML
+  is stored XSS through the model. Render as text (or parse the
+  structured output into React elements), or run through a
+  DOMPurify sanitize step with a strict allowlist.
+fix_strategy: suggest_only

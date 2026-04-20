@@ -1,0 +1,17 @@
+id: CG-XSS-003
+title: "element.innerHTML = dynamic_expression"
+severity: HIGH
+category: xss
+languages: [javascript, typescript]
+patterns:
+  - regex: "\\.innerHTML\\s*=\\s*[a-zA-Z_][a-zA-Z0-9_\\.\\[\\]]*"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.jsx"
+      - "**/*.tsx"
+context_hint: |
+  Assigning a non-literal to innerHTML parses the string as HTML. Prefer
+  textContent, or sanitize the value with a trusted library before it
+  reaches the DOM.
+fix_strategy: suggest_only

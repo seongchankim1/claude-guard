@@ -1,0 +1,19 @@
+id: CG-XSS-010
+title: "marked / markdown-it used without sanitize (or with dangerous options)"
+severity: MEDIUM
+category: xss
+languages: [javascript, typescript]
+patterns:
+  - regex: "marked\\.setOptions\\s*\\(\\s*\\{[\\s\\S]{0,200}sanitize\\s*:\\s*false"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+  - regex: "new\\s+MarkdownIt\\s*\\(\\s*\\{[\\s\\S]{0,200}html\\s*:\\s*true"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  `marked` dropped sanitize; pair it with DOMPurify on the rendered
+  HTML. `markdown-it({ html: true })` passes raw HTML through. Either
+  set html: false or sanitize the output before rendering.
+fix_strategy: suggest_only

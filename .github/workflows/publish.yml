@@ -1,0 +1,56 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+      - name: Verify tag matches package.json version
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          TAG="${GITHUB_REF##*/v}"
+          if [ "$PKG" != "$TAG" ]; then
+            echo "package.json version ($PKG) does not match tag ($TAG)"
+            exit 1
+          fi
+      - name: Publish to npm (provenance)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Extract the CHANGELOG section for just this tag so the release body
+      # isn't the entire changelog dump.
+      - name: Extract release notes for this tag
+        run: |
+          TAG="${GITHUB_REF##*/}"
+          awk -v tag="$TAG" '
+            $0 ~ "^## \\[" tag "\\]" { show=1; next }
+            show && $0 ~ "^## \\[" { show=0 }
+            show
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "No CHANGELOG entry for $TAG, falling back to tag body."
+            echo "Release $TAG" > RELEASE_NOTES.md
+          fi
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body_path: RELEASE_NOTES.md

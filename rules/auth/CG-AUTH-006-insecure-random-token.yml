@@ -1,0 +1,16 @@
+id: CG-AUTH-006
+title: "Security token generated with Math.random or non-crypto RNG"
+severity: HIGH
+category: auth
+languages: [javascript, typescript, python]
+patterns:
+  - regex: "(token|secret|password|key|otp|apiKey|sessionId)\\s*[:=]\\s*(Math\\.random|random\\.random|random\\.uniform)"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.py"
+context_hint: |
+  Math.random / random.random are predictable and not suitable for
+  security-sensitive values. Use crypto.randomBytes / crypto.getRandomValues
+  in Node or browser, and secrets.token_urlsafe / token_bytes in Python.
+fix_strategy: suggest_only

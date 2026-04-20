@@ -1,0 +1,18 @@
+id: CG-LLM-013
+title: "RAG retriever passes fetched document straight into a system prompt"
+severity: MEDIUM
+category: llm
+languages: [javascript, typescript, python]
+patterns:
+  - regex: "role\\s*:\\s*[\"']system[\"']\\s*,\\s*content\\s*:\\s*[^,]*(retrieved|docs?|context|chunks?)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+      - "**/*.py"
+context_hint: |
+  Retrieved documents are untrusted by default (an attacker who can
+  write a doc into your index can write instructions). Keep retrieved
+  content in a user-role message, wrap it in an explicit
+  "treat-as-data" delimiter, and consider a secondary-call filter that
+  rejects prompt-override attempts before the answer is returned.
+fix_strategy: suggest_only

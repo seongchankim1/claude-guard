@@ -1,0 +1,19 @@
+id: CG-AUTH-015
+title: "Signup handler creates a user with role/isAdmin from req.body"
+severity: CRITICAL
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "create\\s*\\(\\s*\\{\\s*data\\s*:[^}]*role\\s*:\\s*(req|request)\\."
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+  - regex: "create\\s*\\(\\s*\\{\\s*data\\s*:[^}]*(isAdmin|admin|superuser)\\s*:\\s*(req|request)\\."
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Letting the client choose their own role/isAdmin flag during signup is
+  an instant admin account. Always hard-code the role for public
+  signups and elevate via a separate server-authenticated flow.
+fix_strategy: suggest_only

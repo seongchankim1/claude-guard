@@ -1,0 +1,15 @@
+id: CG-SQL-002
+title: "Prisma $queryRawUnsafe / $executeRawUnsafe"
+severity: CRITICAL
+category: sql
+languages: [javascript, typescript]
+patterns:
+  - regex: "\\$(queryRawUnsafe|executeRawUnsafe)\\s*\\("
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Prefer the tagged-template form `$queryRaw\u0060...\u0060`, which parameterizes
+  interpolations. The Unsafe variants concatenate strings and are vulnerable
+  to SQL injection the same way manual concatenation is.
+fix_strategy: parameterize_query

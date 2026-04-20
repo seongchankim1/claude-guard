@@ -1,0 +1,19 @@
+id: CG-CFG-052
+title: "busboy / multer without fileSize limit"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "new\\s+Busboy\\s*\\(\\s*\\{[^}]{0,200}\\}\\s*\\)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+  - regex: "multer\\s*\\(\\s*\\{[^}]{0,200}\\}\\s*\\)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  busboy / multer without limits lets a malicious uploader exhaust disk
+  or memory. Pass limits: { fileSize: N, files: N, fields: N } with
+  values sized to your actual use case.
+fix_strategy: suggest_only

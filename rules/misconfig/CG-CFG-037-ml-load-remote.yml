@@ -1,0 +1,14 @@
+id: CG-CFG-037
+title: "Python pickle / joblib.load called on a URL-derived path"
+severity: HIGH
+category: misconfig
+languages: [python]
+patterns:
+  - regex: "(joblib\\.load|pickle\\.load|pickle\\.loads|torch\\.load)\\s*\\([^)]*(urlopen|requests\\.get|urllib\\.request)"
+    files:
+      - "**/*.py"
+context_hint: |
+  Loading a model directly from the network with pickle/joblib/torch is
+  remote code execution. Verify a signature over the artifact first and
+  pin artifacts by hash (sha256 of the file) before loading.
+fix_strategy: suggest_only

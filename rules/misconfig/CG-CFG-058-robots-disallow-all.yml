@@ -1,0 +1,15 @@
+id: CG-CFG-058
+title: "robots.txt uses Disallow: / on a production site"
+severity: LOW
+category: misconfig
+patterns:
+  - regex: "^Disallow:\\s*/\\s*$"
+    files:
+      - "**/robots.txt"
+      - "**/public/robots.txt"
+context_hint: |
+  Disallow: / removes the entire site from search indices. Harmless on
+  staging, catastrophic on production. Gate the content on a server
+  environment check, or ship a minimal robots.txt and let the control
+  plane do env-specific routing.
+fix_strategy: suggest_only

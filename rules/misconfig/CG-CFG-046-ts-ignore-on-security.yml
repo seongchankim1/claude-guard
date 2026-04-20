@@ -1,0 +1,17 @@
+id: CG-CFG-046
+title: "@ts-ignore / @ts-nocheck on an auth or security-sensitive file"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "(@ts-ignore|@ts-nocheck|@ts-expect-error)"
+    files:
+      - "**/auth*.{ts,tsx,js,jsx}"
+      - "**/middleware.{ts,js}"
+      - "**/session*.{ts,tsx,js,jsx}"
+      - "**/cookies*.{ts,tsx,js,jsx}"
+context_hint: |
+  @ts-ignore on a security-critical file hides real type errors, which
+  often mask auth-bypass bugs ("user is never undefined here — but
+  actually it is"). Remove the ignore and fix the underlying typing.
+fix_strategy: suggest_only

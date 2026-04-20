@@ -1,0 +1,16 @@
+id: CG-AUTH-016
+title: "Cookie maxAge set to a multi-year duration"
+severity: LOW
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "maxAge\\s*:\\s*[0-9]{10,}"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  A maxAge of 10+ digits is years of lifetime. Even with httpOnly, a
+  very long-lived cookie is a long-lived risk after a device is lost
+  or compromised. Cap session cookies at days/weeks, and use refresh
+  tokens for "remember me" flows.
+fix_strategy: suggest_only

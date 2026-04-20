@@ -1,0 +1,14 @@
+id: CG-IAC-010
+title: "Terraform RDS instance with publicly_accessible = true"
+severity: CRITICAL
+category: iac
+patterns:
+  - regex: "publicly_accessible\\s*=\\s*true"
+    files:
+      - "**/*.tf"
+context_hint: |
+  A public RDS instance is scanned constantly by the internet and a
+  single weak credential becomes a database compromise. Put the
+  instance in private subnets and reach it via VPC peering, VPN, or a
+  bastion.
+fix_strategy: suggest_only

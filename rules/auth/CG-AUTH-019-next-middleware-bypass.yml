@@ -1,0 +1,15 @@
+id: CG-AUTH-019
+title: "Next.js middleware matcher excludes a protected route by mistake"
+severity: MEDIUM
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "\\?![\\w|]*(signin|signup|login|admin|dashboard)"
+    files:
+      - "**/middleware.ts"
+      - "**/middleware.js"
+context_hint: |
+  Negative matchers that exclude a protected path from middleware leave
+  that route un-gated. Invert the policy: middleware runs on everything
+  by default and explicitly skips only clearly-public paths.
+fix_strategy: suggest_only

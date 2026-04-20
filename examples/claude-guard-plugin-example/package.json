@@ -1,0 +1,8 @@
+{
+  "name": "claude-guard-plugin-example",
+  "version": "0.1.0",
+  "description": "Reference community plugin for claude-guard — YAML rules only, no code.",
+  "files": ["claude-guard-plugin.yml", "rules/"],
+  "keywords": ["claude-guard", "security", "rules"],
+  "license": "MIT"
+}

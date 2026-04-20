@@ -1,0 +1,15 @@
+id: CG-IAC-004
+title: "Kubernetes container runs privileged"
+severity: CRITICAL
+category: iac
+patterns:
+  - regex: "privileged\\s*:\\s*true"
+    files:
+      - "**/*.yaml"
+      - "**/*.yml"
+context_hint: |
+  A privileged container can escape to the host. Unless you're writing a
+  host-level DaemonSet with a specific reason, set securityContext:
+  privileged: false, drop ALL capabilities, and add only the ones you
+  truly need.
+fix_strategy: suggest_only

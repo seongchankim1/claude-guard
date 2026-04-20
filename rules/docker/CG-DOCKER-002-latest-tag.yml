@@ -1,0 +1,20 @@
+id: CG-DOCKER-002
+title: "Dockerfile FROM uses :latest or no tag"
+severity: LOW
+category: docker
+patterns:
+  - regex: "^FROM\\s+[\\w\\./-]+:latest\\b"
+    files:
+      - "**/Dockerfile"
+      - "**/Dockerfile.*"
+      - "**/*.dockerfile"
+  - regex: "^FROM\\s+[\\w\\./-]+$"
+    files:
+      - "**/Dockerfile"
+      - "**/Dockerfile.*"
+      - "**/*.dockerfile"
+context_hint: |
+  :latest (or an untagged FROM) makes builds non-reproducible and leaves
+  you one upstream push away from pulling in a backdoored image. Pin to
+  an explicit digest or a tagged release you've verified.
+fix_strategy: suggest_only

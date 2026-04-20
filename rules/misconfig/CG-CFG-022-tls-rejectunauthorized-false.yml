@@ -1,0 +1,20 @@
+id: CG-CFG-022
+title: "TLS certificate verification disabled (rejectUnauthorized: false)"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "rejectUnauthorized\\s*:\\s*false"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+  - regex: "NODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*[\"']?0"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+      - "**/*.env*"
+context_hint: |
+  Turning off TLS verification makes man-in-the-middle attacks trivial.
+  If you genuinely need to talk to a self-signed server, pin the
+  specific CA via the `ca` option, don't accept any certificate.
+fix_strategy: suggest_only

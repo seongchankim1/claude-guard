@@ -1,0 +1,16 @@
+id: CG-AUTH-021
+title: "WebAuthn verifyAuthentication called with requireUserVerification: false"
+severity: MEDIUM
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "requireUserVerification\\s*:\\s*false"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  WebAuthn UV = false accepts a passkey that did not confirm the user
+  (no biometric/PIN). For sign-in, require userVerification: 'preferred'
+  and reject authentications where the UV flag is not set when the
+  factor is the sole credential.
+fix_strategy: suggest_only

@@ -1,0 +1,15 @@
+id: CG-SQL-003
+title: "MongoDB $where operator with a string"
+severity: HIGH
+category: sql
+languages: [javascript, typescript]
+patterns:
+  - regex: "\\$where\\s*:\\s*[`'\"]"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+context_hint: |
+  MongoDB's $where evaluates JavaScript on the server. Passing user input
+  into it is NoSQL injection. Replace with structured query operators or
+  validate the input as a strict enum before using.
+fix_strategy: suggest_only

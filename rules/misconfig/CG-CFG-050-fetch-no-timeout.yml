@@ -1,0 +1,16 @@
+id: CG-CFG-050
+title: "fetch() to an external URL without AbortSignal timeout"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "await\\s+fetch\\s*\\(\\s*[\"'`]https?:\\/\\/[^\"'`]+[\"'`]\\s*\\)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  An outbound fetch with no timeout can stall for minutes if the
+  remote is slow or dead, blocking your event loop and any request
+  depending on it. Wrap with AbortSignal.timeout(5000) or pass a
+  signal from your request handler.
+fix_strategy: suggest_only

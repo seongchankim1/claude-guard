@@ -1,0 +1,14 @@
+id: CG-CFG-020
+title: "Python pickle.loads / pickle.load on untrusted bytes"
+severity: CRITICAL
+category: misconfig
+languages: [python]
+patterns:
+  - regex: "pickle\\.(loads|load)\\s*\\("
+    files:
+      - "**/*.py"
+context_hint: |
+  pickle deserialization is remote code execution by design — never
+  unpickle data from an untrusted source. Use JSON or a schema-based
+  serializer (msgspec, pydantic, protobuf) for data you did not create.
+fix_strategy: suggest_only

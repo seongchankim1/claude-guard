@@ -1,0 +1,20 @@
+id: CG-AUTH-011
+title: "JWT verify configured to accept the 'none' algorithm"
+severity: CRITICAL
+category: auth
+languages: [javascript, typescript, python]
+patterns:
+  - regex: "algorithms\\s*:\\s*\\[[^\\]]*[\"']none[\"']"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+      - "**/*.py"
+  - regex: "algorithm\\s*=\\s*[\"']none[\"']"
+    files:
+      - "**/*.py"
+context_hint: |
+  Accepting the 'none' algorithm during JWT verification lets anyone
+  forge a valid token. Pin to the specific algorithm your signer uses
+  (e.g. 'RS256' or 'HS256'), and never include 'none' in the allowed
+  list.
+fix_strategy: suggest_only

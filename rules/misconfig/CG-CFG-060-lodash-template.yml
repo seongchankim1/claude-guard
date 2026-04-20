@@ -1,0 +1,17 @@
+id: CG-CFG-060
+title: "lodash.template / _.template used with user input"
+severity: CRITICAL
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "(_|lodash)\\.template\\s*\\([^)]*(req|request)\\.(body|query|params)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  lodash.template compiles a string template that can execute JS in
+  the `<%= %>` interpolation. Historical lodash CVEs (CVE-2021-23337
+  and family) exploit exactly this. Parse user input into plain data
+  and render via a trusted templating engine (handlebars + strict
+  mode, MJML, etc.).
+fix_strategy: suggest_only

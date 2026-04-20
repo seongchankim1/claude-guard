@@ -1,0 +1,24 @@
+id: CG-CFG-001
+title: "CORS Access-Control-Allow-Origin set to '*'"
+severity: HIGH
+category: misconfig
+patterns:
+  - regex: "[\\\"']Access-Control-Allow-Origin[\\\"']\\s*[,:]\\s*[\\\"']\\*[\\\"']"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+      - "**/*.py"
+      - "**/*.go"
+      - "**/*.rb"
+      - "**/*.java"
+      - "**/*.php"
+  - regex: "cors\\s*\\(\\s*\\{\\s*origin\\s*:\\s*[\\\"']\\*[\\\"']"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  "*" combined with credentials (Access-Control-Allow-Credentials: true) is
+  rejected by browsers; if a wildcard appears to work in testing, the
+  server is probably reflecting the Origin header unsafely. Replace with
+  an explicit allowlist and validate the Origin on each request.
+fix_strategy: suggest_only

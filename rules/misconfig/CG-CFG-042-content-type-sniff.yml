@@ -1,0 +1,16 @@
+id: CG-CFG-042
+title: "User-uploaded file served without X-Content-Type-Options: nosniff"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "sendFile\\s*\\([^)]*(req|request|params|body)\\.(body|query|params)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Streaming user-uploaded files without forcing nosniff lets browsers
+  MIME-sniff HTML into an active context (stored XSS via download).
+  Always set X-Content-Type-Options: nosniff and serve uploads from a
+  sandbox origin.
+fix_strategy: suggest_only

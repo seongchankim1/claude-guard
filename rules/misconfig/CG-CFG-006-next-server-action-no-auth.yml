@@ -1,0 +1,16 @@
+id: CG-CFG-006
+title: "Next.js Server Action without visible auth check"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "^[\"']use server[\"'];?\\s*\\n(?:(?!auth|session|user|getUser|getSession|currentUser|requireAuth|cookies\\(\\)).){0,800}export\\s+async\\s+function"
+    files:
+      - "**/*.ts"
+      - "**/*.tsx"
+context_hint: |
+  A Server Action file with no auth/session reference up top is worth a
+  second look — Server Actions run with full backend privileges and are
+  invokable by any client. Ensure every mutating action authenticates
+  the caller (getUser / auth() / cookies()-based session) before acting.
+fix_strategy: wrap_with_authz_guard

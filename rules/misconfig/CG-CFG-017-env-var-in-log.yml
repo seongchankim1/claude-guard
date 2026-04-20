@@ -1,0 +1,18 @@
+id: CG-CFG-017
+title: "Secret-like env var printed to log"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript, python]
+patterns:
+  - regex: "console\\.(log|info|debug|warn|error)\\s*\\([^)]*process\\.env\\.[A-Z_]*(SECRET|KEY|TOKEN|PASSWORD|PRIVATE)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+  - regex: "print\\s*\\([^)]*os\\.environ\\[[\"'][A-Z_]*(SECRET|KEY|TOKEN|PASSWORD|PRIVATE)"
+    files:
+      - "**/*.py"
+context_hint: |
+  Log lines are the single most common leak channel for secrets. Never
+  print environment variables whose names suggest credentials; for
+  debugging, print only the key *name* and its length.
+fix_strategy: suggest_only

@@ -1,0 +1,17 @@
+id: CG-AUTH-008
+title: "Express POST/PUT/DELETE route with no CSRF middleware in scope"
+severity: MEDIUM
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "app\\.(post|put|delete|patch)\\s*\\(\\s*[`'\"][^`'\"]+[`'\"]\\s*,\\s*(?!\\s*csrf)"
+    files:
+      - "**/routes/**/*.{js,ts}"
+      - "**/app.{js,ts}"
+      - "**/server.{js,ts}"
+context_hint: |
+  State-changing routes without a CSRF token check are vulnerable when
+  the frontend uses cookie-based sessions. Either mount csurf (or a
+  similar middleware) globally, or require an explicit X-Requested-With
+  or custom header that browsers won't send cross-origin.
+fix_strategy: suggest_only

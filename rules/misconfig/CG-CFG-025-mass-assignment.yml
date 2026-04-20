@@ -1,0 +1,16 @@
+id: CG-CFG-025
+title: "Model create/update passed a raw request body (mass assignment)"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "\\.(create|update|upsert)\\s*\\(\\s*\\{\\s*data\\s*:\\s*(req|request)\\.body\\s*\\}\\s*\\)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Passing req.body straight into Prisma.create / update lets the client
+  set fields you didn't intend (role, isAdmin, ownerId…). Whitelist
+  allowed fields via Zod or an explicit pick() before handing data to
+  the ORM.
+fix_strategy: suggest_only

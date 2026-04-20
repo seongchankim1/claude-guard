@@ -1,0 +1,16 @@
+id: CG-CFG-040
+title: "Express app.set('trust proxy', true) accepts any X-Forwarded-For"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "app\\.set\\s*\\(\\s*[\"']trust proxy[\"']\\s*,\\s*true\\s*\\)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  'trust proxy: true' tells Express to trust every upstream, which means
+  any client can spoof req.ip by sending their own X-Forwarded-For
+  header. Use the number of hops you actually have, or a specific
+  CIDR / IP, instead of unconditional trust.
+fix_strategy: suggest_only

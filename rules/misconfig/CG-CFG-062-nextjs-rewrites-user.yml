@@ -1,0 +1,15 @@
+id: CG-CFG-062
+title: "Next.js rewrites() destination built from a wildcard pattern into external host"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "destination\\s*:\\s*[\"']https?://[^\"']{0,120}\\$\\{"
+    files:
+      - "**/next.config.{js,ts,mjs,cjs}"
+context_hint: |
+  next.config rewrites with an interpolated external destination can
+  proxy arbitrary upstreams, essentially turning the app into an open
+  proxy. Pin the destination or resolve the upstream host from a
+  closed enum, not from a URL segment.
+fix_strategy: suggest_only

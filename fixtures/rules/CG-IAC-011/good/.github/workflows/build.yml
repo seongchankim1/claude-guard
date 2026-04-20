@@ -1,0 +1,8 @@
+name: build
+on: [push]
+permissions: read-all
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4

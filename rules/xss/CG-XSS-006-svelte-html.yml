@@ -1,0 +1,12 @@
+id: CG-XSS-006
+title: "Svelte {@html …} binding with a non-literal expression"
+severity: HIGH
+category: xss
+patterns:
+  - regex: "\\{@html\\s+[a-zA-Z_][a-zA-Z0-9_\\.]*\\s*\\}"
+    files:
+      - "**/*.svelte"
+context_hint: |
+  {@html x} renders the value as raw HTML. If x can reach user input,
+  it's XSS. Render as text (just {x}), or sanitize with DOMPurify first.
+fix_strategy: suggest_only

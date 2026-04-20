@@ -1,0 +1,15 @@
+id: CG-CFG-029
+title: "Log line includes the whole request body or a user-supplied object"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "(logger|log|console\\.(log|info|debug))\\s*\\([^)]*\\b(req\\.body|request\\.body|params\\.body)\\b"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Logging an entire request body eventually logs passwords, tokens, and
+  PII. Log a summary, redact sensitive keys, and keep the raw payload
+  only in a short-lived, access-controlled debug log.
+fix_strategy: suggest_only

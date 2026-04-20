@@ -1,0 +1,16 @@
+id: CG-XSS-009
+title: "JSX anchor href={expr} without a scheme guard"
+severity: MEDIUM
+category: xss
+languages: [javascript, typescript]
+patterns:
+  - regex: "<a\\s[^>]*href=\\{[a-zA-Z_][a-zA-Z0-9_\\.\\[\\]]*\\}"
+    files:
+      - "**/*.jsx"
+      - "**/*.tsx"
+context_hint: |
+  Rendering <a href={userInput}> can yield `javascript:` or `data:` URLs
+  if the value isn't validated. Wrap in a helper that only allows
+  explicit schemes (https, mailto, tel) and falls back to a safe
+  value.
+fix_strategy: suggest_only

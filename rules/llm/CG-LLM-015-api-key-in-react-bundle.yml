@@ -1,0 +1,16 @@
+id: CG-LLM-015
+title: "use client module imports an LLM SDK (it will bundle to the browser)"
+severity: CRITICAL
+category: llm
+languages: [javascript, typescript]
+patterns:
+  - regex: "[\"']use client[\"'];?\\s*\\n[\\s\\S]{0,400}import[^\\n]*(@anthropic-ai/sdk|openai|@google/generative-ai|cohere-ai|replicate|@pinecone-database/pinecone)"
+    files:
+      - "**/*.{ts,tsx,js,jsx}"
+context_hint: |
+  A 'use client' file that imports an LLM SDK will bundle the SDK and
+  any credential config into the browser — including the API key if
+  it is referenced during module evaluation. Move LLM calls behind a
+  server route (API route, Server Action, Edge function) and keep the
+  key server-side.
+fix_strategy: suggest_only

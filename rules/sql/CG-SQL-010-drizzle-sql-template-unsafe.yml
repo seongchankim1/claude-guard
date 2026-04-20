@@ -1,0 +1,16 @@
+id: CG-SQL-010
+title: "Drizzle sql.raw() with a variable argument"
+severity: CRITICAL
+category: sql
+languages: [javascript, typescript]
+patterns:
+  - regex: "sql\\.raw\\s*\\(\\s*[a-zA-Z_][\\w]*"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Drizzle's sql.raw() inserts the argument as literal SQL — if that
+  argument is built from user input, it's SQL injection. Use the
+  tagged sql`...` template form (which parameterizes interpolations)
+  and keep sql.raw() for static fragments only.
+fix_strategy: suggest_only

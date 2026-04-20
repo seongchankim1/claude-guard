@@ -1,0 +1,18 @@
+id: CG-SQL-006
+title: "SQLAlchemy text() composed with f-string or .format()"
+severity: CRITICAL
+category: sql
+languages: [python]
+patterns:
+  - regex: "text\\s*\\(\\s*f[\"']"
+    files:
+      - "**/*.py"
+  - regex: "text\\s*\\([^)]*\\.format\\s*\\("
+    files:
+      - "**/*.py"
+context_hint: |
+  text() evaluates the final string as SQL. If you build it with an
+  f-string or .format(), injection is back. Use bindparams: text("...
+  WHERE id = :id").bindparams(id=id) or stick to the expression
+  language.
+fix_strategy: suggest_only

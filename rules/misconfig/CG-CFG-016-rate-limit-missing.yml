@@ -1,0 +1,17 @@
+id: CG-CFG-016
+title: "Public HTTP handler with no rate-limit middleware in the same file"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "app\\.(get|post|put|delete|patch)\\s*\\([^)]*(login|signup|forgot|reset|verify)"
+    files:
+      - "**/routes/**/*.{js,ts}"
+      - "**/app.{js,ts}"
+      - "**/server.{js,ts}"
+context_hint: |
+  Auth-facing endpoints (login, signup, forgot-password, verify) without
+  rate limiting invite credential-stuffing and enumeration. Wrap the
+  route with express-rate-limit or similar, and tune the limits per
+  IP + per account.
+fix_strategy: suggest_only

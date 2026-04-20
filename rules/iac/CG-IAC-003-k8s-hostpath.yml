@@ -1,0 +1,15 @@
+id: CG-IAC-003
+title: "Kubernetes pod uses hostPath volume"
+severity: HIGH
+category: iac
+patterns:
+  - regex: "hostPath\\s*:\\s*\\n\\s*path\\s*:"
+    files:
+      - "**/*.yaml"
+      - "**/*.yml"
+context_hint: |
+  hostPath volumes mount the node filesystem into the pod, which breaks
+  most multi-tenant isolation guarantees. Prefer persistentVolumeClaims
+  with scoped storage classes, or if you genuinely need node access, use
+  a CSI driver with an explicit access scope.
+fix_strategy: suggest_only

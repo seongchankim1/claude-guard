@@ -1,0 +1,16 @@
+id: CG-CFG-011
+title: "Next.js response writes no Content-Security-Policy header"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "new\\s+NextResponse\\s*\\([^)]*\\)(?![^\\n]*Content-Security-Policy)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Content-Security-Policy is the most effective in-depth defense against
+  XSS once it lands. Ship a strict policy via middleware or next.config
+  headers; script-src with a nonce and default-src 'self' is a good
+  starting point.
+fix_strategy: suggest_only

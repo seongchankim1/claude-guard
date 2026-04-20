@@ -1,0 +1,16 @@
+id: CG-CFG-005
+title: "Express app created without helmet() or equivalent header middleware"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "(const|let|var)\\s+\\w+\\s*=\\s*express\\s*\\(\\s*\\)"
+    files:
+      - "**/server.{js,ts}"
+      - "**/app.{js,ts}"
+      - "**/index.{js,ts}"
+context_hint: |
+  An Express app without helmet (or an equivalent that sets X-Frame-
+  Options, CSP, HSTS, and friends) ships default headers that allow
+  clickjacking and mixed content. Install helmet and app.use(helmet()).
+fix_strategy: suggest_only

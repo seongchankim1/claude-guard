@@ -1,0 +1,17 @@
+id: CG-LLM-016
+title: "LLM tool definition uses type: string with no enum or regex pattern"
+severity: LOW
+category: llm
+languages: [javascript, typescript, python]
+patterns:
+  - regex: "input_schema\\s*:\\s*\\{[^}]{0,300}type\\s*:\\s*[\"']string[\"'](?![\\s\\S]{0,200}(enum|pattern))"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+      - "**/*.py"
+context_hint: |
+  A model tool whose input is "any string" gives prompt injection a lot
+  of latitude. Where possible, constrain the input with an enum, a
+  regex pattern, or a nested schema so the tool handler has less work
+  to do at runtime.
+fix_strategy: suggest_only

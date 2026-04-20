@@ -1,0 +1,16 @@
+id: CG-AUTH-002
+title: "Session cookie set without httpOnly / Secure / SameSite"
+severity: HIGH
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "cookies\\(\\)\\.set\\s*\\("
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Session cookies must set httpOnly (to block JS reads), Secure (to prevent
+  transmission over plain HTTP in production), and SameSite=Lax or Strict
+  (to blunt CSRF). Review each cookies().set call nearby to confirm all
+  three flags are present on session/auth tokens.
+fix_strategy: set_cookie_flags

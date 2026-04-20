@@ -1,0 +1,20 @@
+id: CG-CFG-045
+title: "Express body-parser / express.json() without a size limit"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "express\\.(json|urlencoded|raw|text)\\s*\\(\\s*\\)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+  - regex: "bodyParser\\.(json|urlencoded|raw|text)\\s*\\(\\s*\\)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  A missing limit defaults to ~100kb which is fine, but if you've
+  raised it elsewhere or you accept file uploads through this
+  middleware, an attacker can fill memory. Pass an explicit { limit:
+  '10kb' } (or a value you've sized for the route).
+fix_strategy: suggest_only

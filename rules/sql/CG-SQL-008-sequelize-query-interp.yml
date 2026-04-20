@@ -1,0 +1,15 @@
+id: CG-SQL-008
+title: "Sequelize query() with interpolated SQL string"
+severity: CRITICAL
+category: sql
+languages: [javascript, typescript]
+patterns:
+  - regex: "sequelize\\.query\\s*\\(\\s*`[^`]*\\$\\{"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Template-string interpolation into sequelize.query() bypasses the
+  parameter replacement system. Pass the second argument as
+  { replacements: { name: value } } and reference :name in the SQL.
+fix_strategy: suggest_only

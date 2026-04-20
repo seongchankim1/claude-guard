@@ -1,0 +1,14 @@
+id: CG-CFG-044
+title: "Python subprocess called with shell=True"
+severity: HIGH
+category: misconfig
+languages: [python]
+patterns:
+  - regex: "(subprocess\\.(run|call|Popen|check_output|check_call)|os\\.system)\\s*\\([^)]*shell\\s*=\\s*True"
+    files:
+      - "**/*.py"
+context_hint: |
+  shell=True expands the command string via /bin/sh. If any part of
+  that string comes from user input, it's arbitrary shell execution.
+  Pass a list argv and shell=False (the default on most calls).
+fix_strategy: suggest_only

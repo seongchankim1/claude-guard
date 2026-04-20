@@ -1,0 +1,22 @@
+id: CG-AUTH-007
+title: "OAuth authorization URL built without a state parameter"
+severity: HIGH
+category: auth
+patterns:
+  - regex: "/oauth/authorize\\?[^\"'`]*(?!state=)[^\"'`]*(?:&|$)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+      - "**/*.py"
+      - "**/*.go"
+  - regex: "authorize\\?response_type=code&client_id=[^&]+(?![^\"'`]*state=)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+      - "**/*.py"
+      - "**/*.go"
+context_hint: |
+  An OAuth authorization request without a state parameter is vulnerable
+  to CSRF on the redirect URI. Generate a random nonce per request,
+  store it in the user's session, and verify it in the callback handler.
+fix_strategy: suggest_only

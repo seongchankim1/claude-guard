@@ -1,0 +1,69 @@
+{
+  "name": "claude-guard-mcp",
+  "version": "2.0.0",
+  "description": "MCP server that audits AI-generated code using real-attacker techniques, then fixes only the items you check.",
+  "type": "module",
+  "bin": {
+    "claude-guard-mcp": "dist/bin/mcp.js",
+    "claude-guard": "dist/bin/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/bin/mcp.js dist/bin/cli.js || true",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "start": "node dist/bin/mcp.js"
+  },
+  "files": [
+    "dist",
+    "rules",
+    "schema",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "mcp",
+    "security",
+    "claude",
+    "audit",
+    "sast",
+    "vibe-coding",
+    "defensive-security",
+    "next.js",
+    "supabase"
+  ],
+  "license": "MIT",
+  "author": "seongchankim1 <minielec7@gmail.com>",
+  "bugs": {
+    "url": "https://github.com/seongchankim1/claude-guard/issues"
+  },
+  "homepage": "https://github.com/seongchankim1/claude-guard#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seongchankim1/claude-guard.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.0",
+    "fs-extra": "^11.2.0",
+    "globby": "^14.0.0",
+    "js-yaml": "^4.1.0",
+    "safe-regex2": "^4.0.0",
+    "simple-git": "^3.25.0",
+    "ts-morph": "^23.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.12.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

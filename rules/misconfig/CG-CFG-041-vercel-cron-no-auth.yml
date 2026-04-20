@@ -1,0 +1,20 @@
+id: CG-CFG-041
+title: "Cron handler under app/api/cron — verify CRON_SECRET Bearer check"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "export function (GET|POST)"
+    files:
+      - "**/app/api/cron/**/*.ts"
+      - "**/app/api/cron/**/*.js"
+  - regex: "export async function (GET|POST)"
+    files:
+      - "**/app/api/cron/**/*.ts"
+      - "**/app/api/cron/**/*.js"
+context_hint: |
+  Vercel cron routes are publicly reachable — anyone with the URL can
+  trigger the job. Check the Authorization header against
+  process.env.CRON_SECRET (Vercel sends a Bearer token for scheduled
+  invocations) and reject otherwise.
+fix_strategy: suggest_only

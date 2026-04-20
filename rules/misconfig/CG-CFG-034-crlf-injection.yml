@@ -1,0 +1,16 @@
+id: CG-CFG-034
+title: "setHeader / res.set with a value built from request input"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "(res|response)\\.(set|setHeader)\\s*\\([^)]*,\\s*[^)]{0,80}(req|request)\\.(body|query|params|headers)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Writing a header value built from request input is CRLF injection if
+  the value is not filtered — the client can inject a newline followed
+  by another header or a response-splitting boundary. Strip \\r and \\n
+  from the value before calling setHeader.
+fix_strategy: suggest_only

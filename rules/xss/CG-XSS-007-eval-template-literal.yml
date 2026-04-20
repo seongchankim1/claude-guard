@@ -1,0 +1,17 @@
+id: CG-XSS-007
+title: "eval() / new Function() with a template literal (likely user input)"
+severity: CRITICAL
+category: xss
+languages: [javascript, typescript]
+patterns:
+  - regex: "\\beval\\s*\\(\\s*`"
+    files:
+      - "**/*.{js,ts,jsx,tsx}"
+  - regex: "new\\s+Function\\s*\\(\\s*`"
+    files:
+      - "**/*.{js,ts,jsx,tsx}"
+context_hint: |
+  eval/new Function on a template literal is almost always executing an
+  attacker-controlled string. Parse the input into structured data and
+  dispatch on known cases instead.
+fix_strategy: suggest_only

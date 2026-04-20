@@ -1,0 +1,14 @@
+id: CG-IAC-001
+title: "Terraform security group allows 0.0.0.0/0"
+severity: CRITICAL
+category: iac
+patterns:
+  - regex: "cidr_blocks\\s*=\\s*\\[\\s*[\"']0\\.0\\.0\\.0/0[\"']"
+    files:
+      - "**/*.tf"
+context_hint: |
+  A 0.0.0.0/0 ingress/egress rule means the whole internet can reach (or
+  be reached by) that resource. Restrict to an explicit CIDR, or if
+  public access is required, move the resource behind a load balancer or
+  WAF and narrow the port range.
+fix_strategy: suggest_only

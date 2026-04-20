@@ -1,0 +1,16 @@
+id: CG-XSS-005
+title: "target=\"_blank\" anchor without rel=\"noopener\""
+severity: LOW
+category: xss
+languages: [javascript, typescript]
+patterns:
+  - regex: "target\\s*=\\s*[\"']_blank[\"'](?![^>]*rel\\s*=\\s*[\"'][^\"']*noopener)"
+    files:
+      - "**/*.jsx"
+      - "**/*.tsx"
+      - "**/*.html"
+context_hint: |
+  target="_blank" without rel="noopener" (or noreferrer) lets the opened
+  page call window.opener.location, enabling tabnabbing. Always add rel
+  to external links opened in a new tab.
+fix_strategy: suggest_only
