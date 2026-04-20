@@ -1,0 +1,15 @@
+id: CG-CFG-055
+title: "tRPC publicProcedure used for a mutation (.mutation())"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "publicProcedure[\\s\\S]{0,200}\\.mutation\\s*\\("
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  tRPC publicProcedure skips authentication. Pair it with protectedProcedure
+  / authedProcedure for any mutation — a signup flow is the rare exception,
+  and even that needs rate limiting.
+fix_strategy: suggest_only

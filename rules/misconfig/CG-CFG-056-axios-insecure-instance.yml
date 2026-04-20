@@ -1,0 +1,15 @@
+id: CG-CFG-056
+title: "axios.create with httpsAgent disabling TLS verification"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "axios\\.create\\s*\\(\\s*\\{[^}]{0,400}rejectUnauthorized\\s*:\\s*false"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  axios.create({ httpsAgent: new https.Agent({ rejectUnauthorized: false }) })
+  disables TLS verification for every call from that instance. Pin a CA
+  instead, or reach for a fixture/test environment mode gate.
+fix_strategy: suggest_only

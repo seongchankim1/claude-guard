@@ -1,8 +1,8 @@
 # claude-guard rule catalogue
 
-140 active builtin rules.
+150 active builtin rules.
 
-## Authentication & sessions (21)
+## Authentication & sessions (22)
 
 ### CG-AUTH-001 — JWT signing secret is a short literal
 - **Severity:** HIGH
@@ -201,6 +201,17 @@
 > and reject authentications where the UV flag is not set when the
 > factor is the sole credential.
 
+### CG-AUTH-022 — Password-reset response returns the reset token in the body
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Returning the reset token in the response body skips the email
+> verification step entirely — anyone who hits the endpoint gets a
+> token they can use. Email the token instead (or link with the token
+> embedded), and reply with 204 regardless of whether the email
+> exists.
+
 ## Docker (2)
 
 ### CG-DOCKER-001 — Dockerfile installs packages without --no-install-recommends
@@ -220,7 +231,7 @@
 > you one upstream push away from pulling in a backdoored image. Pin to
 > an explicit digest or a tagged release you've verified.
 
-## Infrastructure as code (11)
+## Infrastructure as code (12)
 
 ### CG-IAC-001 — Terraform security group allows 0.0.0.0/0
 - **Severity:** CRITICAL
@@ -316,7 +327,15 @@
 > and cut releases. Default to `permissions: read-all` at the workflow
 > level and opt in per job / step only when needed.
 
-## LLM / AI-specific risks (15)
+### CG-IAC-012 — IAM policy with Action: '*' or Resource: '*'
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> `Action: '*'` or `Resource: '*'` grants full access. Narrow to the
+> specific verbs + ARNs the identity needs; wildcard policies are a
+> common path from minor IAM compromise to full account takeover.
+
+## LLM / AI-specific risks (16)
 
 ### CG-LLM-001 — User input interpolated into a system/role prompt
 - **Severity:** HIGH
@@ -470,7 +489,201 @@
 > server route (API route, Server Action, Edge function) and keep the
 > key server-side.
 
-## Secrets (18)
+### CG-LLM-016 — LLM tool definition uses type: string with no enum or regex pattern
+- **Severity:** LOW
+- **Languages:** javascript, typescript, python
+- **Fix strategy:** `suggest_only`
+
+> A model tool whose input is "any string" gives prompt injection a lot
+> of latitude. Where possible, constrain the input with an enum, a
+> regex pattern, or a nested schema so the tool handler has less work
+> to do at runtime.
+
+## Cross-site scripting (10)
+
+### CG-XSS-001 — dangerouslySetInnerHTML with a dynamic expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Passing non-literal HTML to dangerouslySetInnerHTML is XSS unless the
+> string is produced by a trusted sanitizer (for example DOMPurify).
+> Prefer rendering the content as text, or sanitize explicitly with a
+> dependency you trust and keep updated.
+
+### CG-XSS-002 — Vue v-html binding with non-literal expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> v-html renders raw HTML. If the value comes from user input or a third
+> party, this is XSS. Render as text, or sanitize with a library like
+> DOMPurify before binding.
+
+### CG-XSS-003 — element.innerHTML = dynamic_expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Assigning a non-literal to innerHTML parses the string as HTML. Prefer
+> textContent, or sanitize the value with a trusted library before it
+> reaches the DOM.
+
+### CG-XSS-004 — href / src set to javascript: scheme
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> javascript: URLs execute in the origin of the rendering page. If the
+> value is ever attacker-controlled, it becomes XSS. Avoid
+> javascript: entirely; for dynamic navigation use event handlers.
+
+### CG-XSS-005 — target="_blank" anchor without rel="noopener"
+- **Severity:** LOW
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> target="_blank" without rel="noopener" (or noreferrer) lets the opened
+> page call window.opener.location, enabling tabnabbing. Always add rel
+> to external links opened in a new tab.
+
+### CG-XSS-006 — Svelte {@html …} binding with a non-literal expression
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> {@html x} renders the value as raw HTML. If x can reach user input,
+> it's XSS. Render as text (just {x}), or sanitize with DOMPurify first.
+
+### CG-XSS-007 — eval() / new Function() with a template literal (likely user input)
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> eval/new Function on a template literal is almost always executing an
+> attacker-controlled string. Parse the input into structured data and
+> dispatch on known cases instead.
+
+### CG-XSS-008 — window.open(url) where url comes from user input
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> window.open accepts "javascript:" URLs and can open opener-controlled
+> tabs (tabnabbing). Validate the URL against a strict scheme/host
+> allowlist and pass "noopener,noreferrer" in the features argument.
+
+### CG-XSS-009 — JSX anchor href={expr} without a scheme guard
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Rendering <a href={userInput}> can yield `javascript:` or `data:` URLs
+> if the value isn't validated. Wrap in a helper that only allows
+> explicit schemes (https, mailto, tel) and falls back to a safe
+> value.
+
+### CG-XSS-010 — marked / markdown-it used without sanitize (or with dangerous options)
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> `marked` dropped sanitize; pair it with DOMPurify on the rendered
+> HTML. `markdown-it({ html: true })` passes raw HTML through. Either
+> set html: false or sanitize the output before rendering.
+
+## SQL / NoSQL injection (10)
+
+### CG-SQL-001 — SQL string concatenation with a variable
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Concatenating user-controlled data into a raw SQL string is the canonical
+> injection vector. Use parameterized queries, the ORM's safe API, or a
+> tagged-template builder instead.
+
+### CG-SQL-002 — Prisma $queryRawUnsafe / $executeRawUnsafe
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `parameterize_query`
+
+> Prefer the tagged-template form `$queryRaw\u0060...\u0060`, which parameterizes
+> interpolations. The Unsafe variants concatenate strings and are vulnerable
+> to SQL injection the same way manual concatenation is.
+
+### CG-SQL-003 — MongoDB $where operator with a string
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> MongoDB's $where evaluates JavaScript on the server. Passing user input
+> into it is NoSQL injection. Replace with structured query operators or
+> validate the input as a strict enum before using.
+
+### CG-SQL-004 — Knex .raw() with template-string interpolation
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Interpolating into knex.raw() bypasses parameter binding. Pass bindings
+> as the second argument: .raw('? ... ?', [value1, value2]).
+
+### CG-SQL-005 — Python f-string or .format() composing a SQL query
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> Python's f-strings and .format() assemble the final string before the
+> DB driver sees it, so bind parameters are lost. Pass parameters as a
+> tuple or dict in the second argument to execute().
+
+### CG-SQL-006 — SQLAlchemy text() composed with f-string or .format()
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> text() evaluates the final string as SQL. If you build it with an
+> f-string or .format(), injection is back. Use bindparams: text("...
+> WHERE id = :id").bindparams(id=id) or stick to the expression
+> language.
+
+### CG-SQL-007 — Django raw() composed with f-string or .format()
+- **Severity:** CRITICAL
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> Django's QuerySet.raw() takes optional params; pass them separately
+> rather than formatting user input into the SQL string. .raw("SELECT
+> ... WHERE id = %s", [id]) is safe; an f-string is not.
+
+### CG-SQL-008 — Sequelize query() with interpolated SQL string
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Template-string interpolation into sequelize.query() bypasses the
+> parameter replacement system. Pass the second argument as
+> { replacements: { name: value } } and reference :name in the SQL.
+
+### CG-SQL-009 — TypeORM manager.query() with template-literal interpolation
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> TypeORM's manager.query() accepts a parameter array as the second
+> argument. Templates interpolate directly into the SQL string and
+> lose binding. Pass parameters: manager.query(`SELECT ... WHERE id=$1`, [id]).
+
+### CG-SQL-010 — Drizzle sql.raw() with a variable argument
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Drizzle's sql.raw() inserts the argument as literal SQL — if that
+> argument is built from user input, it's SQL injection. Use the
+> tagged sql`...` template form (which parameterizes interpolations)
+> and keep sql.raw() for static fragments only.
+
+## Secrets (19)
 
 ### CG-SEC-001 — NEXT_PUBLIC_* env var appears to hold a secret
 - **Severity:** CRITICAL
@@ -631,7 +844,15 @@
 > Rotate via npm's website, and replace with ${NPM_TOKEN} sourced from
 > a secret at CI/deploy time.
 
-## Misconfiguration (54)
+### CG-SEC-019 — .vercel/.env.development.local or similar committed
+- **Severity:** CRITICAL
+- **Fix strategy:** `suggest_only`
+
+> Vercel CLI pulls environment variables into .vercel/. Committing that
+> directory ships production credentials to your repo. Add `.vercel/`
+> to .gitignore; rotate any values that ended up in git history.
+
+## Misconfiguration (59)
 
 ### CG-CFG-001 — CORS Access-Control-Allow-Origin set to '*'
 - **Severity:** HIGH
@@ -1140,176 +1361,48 @@
 > app will silently forget data on restart. Route through a file path
 > for production and keep :memory: behind a test-only guard.
 
-## Cross-site scripting (10)
-
-### CG-XSS-001 — dangerouslySetInnerHTML with a dynamic expression
+### CG-CFG-055 — tRPC publicProcedure used for a mutation (.mutation())
 - **Severity:** HIGH
 - **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> Passing non-literal HTML to dangerouslySetInnerHTML is XSS unless the
-> string is produced by a trusted sanitizer (for example DOMPurify).
-> Prefer rendering the content as text, or sanitize explicitly with a
-> dependency you trust and keep updated.
+> tRPC publicProcedure skips authentication. Pair it with protectedProcedure
+> / authedProcedure for any mutation — a signup flow is the rare exception,
+> and even that needs rate limiting.
 
-### CG-XSS-002 — Vue v-html binding with non-literal expression
+### CG-CFG-056 — axios.create with httpsAgent disabling TLS verification
 - **Severity:** HIGH
 - **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> v-html renders raw HTML. If the value comes from user input or a third
-> party, this is XSS. Render as text, or sanitize with a library like
-> DOMPurify before binding.
+> axios.create({ httpsAgent: new https.Agent({ rejectUnauthorized: false }) })
+> disables TLS verification for every call from that instance. Pin a CA
+> instead, or reach for a fixture/test environment mode gate.
 
-### CG-XSS-003 — element.innerHTML = dynamic_expression
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Assigning a non-literal to innerHTML parses the string as HTML. Prefer
-> textContent, or sanitize the value with a trusted library before it
-> reaches the DOM.
-
-### CG-XSS-004 — href / src set to javascript: scheme
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> javascript: URLs execute in the origin of the rendering page. If the
-> value is ever attacker-controlled, it becomes XSS. Avoid
-> javascript: entirely; for dynamic navigation use event handlers.
-
-### CG-XSS-005 — target="_blank" anchor without rel="noopener"
+### CG-CFG-057 — Strict-Transport-Security with max-age below 1 year
 - **Severity:** LOW
-- **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> target="_blank" without rel="noopener" (or noreferrer) lets the opened
-> page call window.opener.location, enabling tabnabbing. Always add rel
-> to external links opened in a new tab.
+> HSTS max-age below 31536000 (1 year) is not accepted for preload and
+> leaves users without memorized HSTS protection if they visit only
+> occasionally. Use max-age=31536000; includeSubDomains; preload once
+> you've verified every subdomain is HTTPS.
 
-### CG-XSS-006 — Svelte {@html …} binding with a non-literal expression
-- **Severity:** HIGH
+### CG-CFG-058 — robots.txt uses Disallow: / on a production site
+- **Severity:** LOW
 - **Fix strategy:** `suggest_only`
 
-> {@html x} renders the value as raw HTML. If x can reach user input,
-> it's XSS. Render as text (just {x}), or sanitize with DOMPurify first.
+> Disallow: / removes the entire site from search indices. Harmless on
+> staging, catastrophic on production. Gate the content on a server
+> environment check, or ship a minimal robots.txt and let the control
+> plane do env-specific routing.
 
-### CG-XSS-007 — eval() / new Function() with a template literal (likely user input)
+### CG-CFG-059 — node-serialize / superjson unserialize called on request input
 - **Severity:** CRITICAL
 - **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> eval/new Function on a template literal is almost always executing an
-> attacker-controlled string. Parse the input into structured data and
-> dispatch on known cases instead.
-
-### CG-XSS-008 — window.open(url) where url comes from user input
-- **Severity:** MEDIUM
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> window.open accepts "javascript:" URLs and can open opener-controlled
-> tabs (tabnabbing). Validate the URL against a strict scheme/host
-> allowlist and pass "noopener,noreferrer" in the features argument.
-
-### CG-XSS-009 — JSX anchor href={expr} without a scheme guard
-- **Severity:** MEDIUM
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Rendering <a href={userInput}> can yield `javascript:` or `data:` URLs
-> if the value isn't validated. Wrap in a helper that only allows
-> explicit schemes (https, mailto, tel) and falls back to a safe
-> value.
-
-### CG-XSS-010 — marked / markdown-it used without sanitize (or with dangerous options)
-- **Severity:** MEDIUM
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> `marked` dropped sanitize; pair it with DOMPurify on the rendered
-> HTML. `markdown-it({ html: true })` passes raw HTML through. Either
-> set html: false or sanitize the output before rendering.
-
-## SQL / NoSQL injection (9)
-
-### CG-SQL-001 — SQL string concatenation with a variable
-- **Severity:** CRITICAL
-- **Fix strategy:** `suggest_only`
-
-> Concatenating user-controlled data into a raw SQL string is the canonical
-> injection vector. Use parameterized queries, the ORM's safe API, or a
-> tagged-template builder instead.
-
-### CG-SQL-002 — Prisma $queryRawUnsafe / $executeRawUnsafe
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `parameterize_query`
-
-> Prefer the tagged-template form `$queryRaw\u0060...\u0060`, which parameterizes
-> interpolations. The Unsafe variants concatenate strings and are vulnerable
-> to SQL injection the same way manual concatenation is.
-
-### CG-SQL-003 — MongoDB $where operator with a string
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> MongoDB's $where evaluates JavaScript on the server. Passing user input
-> into it is NoSQL injection. Replace with structured query operators or
-> validate the input as a strict enum before using.
-
-### CG-SQL-004 — Knex .raw() with template-string interpolation
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Interpolating into knex.raw() bypasses parameter binding. Pass bindings
-> as the second argument: .raw('? ... ?', [value1, value2]).
-
-### CG-SQL-005 — Python f-string or .format() composing a SQL query
-- **Severity:** CRITICAL
-- **Languages:** python
-- **Fix strategy:** `suggest_only`
-
-> Python's f-strings and .format() assemble the final string before the
-> DB driver sees it, so bind parameters are lost. Pass parameters as a
-> tuple or dict in the second argument to execute().
-
-### CG-SQL-006 — SQLAlchemy text() composed with f-string or .format()
-- **Severity:** CRITICAL
-- **Languages:** python
-- **Fix strategy:** `suggest_only`
-
-> text() evaluates the final string as SQL. If you build it with an
-> f-string or .format(), injection is back. Use bindparams: text("...
-> WHERE id = :id").bindparams(id=id) or stick to the expression
-> language.
-
-### CG-SQL-007 — Django raw() composed with f-string or .format()
-- **Severity:** CRITICAL
-- **Languages:** python
-- **Fix strategy:** `suggest_only`
-
-> Django's QuerySet.raw() takes optional params; pass them separately
-> rather than formatting user input into the SQL string. .raw("SELECT
-> ... WHERE id = %s", [id]) is safe; an f-string is not.
-
-### CG-SQL-008 — Sequelize query() with interpolated SQL string
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Template-string interpolation into sequelize.query() bypasses the
-> parameter replacement system. Pass the second argument as
-> { replacements: { name: value } } and reference :name in the SQL.
-
-### CG-SQL-009 — TypeORM manager.query() with template-literal interpolation
-- **Severity:** CRITICAL
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> TypeORM's manager.query() accepts a parameter array as the second
-> argument. Templates interpolate directly into the SQL string and
-> lose binding. Pass parameters: manager.query(`SELECT ... WHERE id=$1`, [id]).
+> node-serialize's unserialize has a history of RCE (CVE-2017-5941)
+> and is not safe on attacker-controlled input. superjson.parse is
+> safer but still expands into complex types you might not expect.
+> Use JSON.parse + a schema validator (zod) for untrusted input.

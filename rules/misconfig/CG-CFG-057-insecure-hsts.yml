@@ -1,0 +1,15 @@
+id: CG-CFG-057
+title: "Strict-Transport-Security with max-age below 1 year"
+severity: LOW
+category: misconfig
+patterns:
+  - regex: "Strict-Transport-Security[^\\n]*max-age=([0-9]|[1-9][0-9]{0,6})(?:[^0-9]|$)"
+    files:
+      - "**/*.{js,ts,py,go,rb,java,conf,toml,yaml,yml}"
+      - "**/nginx.conf"
+context_hint: |
+  HSTS max-age below 31536000 (1 year) is not accepted for preload and
+  leaves users without memorized HSTS protection if they visit only
+  occasionally. Use max-age=31536000; includeSubDomains; preload once
+  you've verified every subdomain is HTTPS.
+fix_strategy: suggest_only

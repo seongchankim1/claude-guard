@@ -1,0 +1,20 @@
+id: CG-CFG-059
+title: "node-serialize / superjson unserialize called on request input"
+severity: CRITICAL
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "from\\s+[\"']node-serialize[\"']"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+  - regex: "require\\s*\\(\\s*[\"']node-serialize[\"']"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  node-serialize's unserialize has a history of RCE (CVE-2017-5941)
+  and is not safe on attacker-controlled input. superjson.parse is
+  safer but still expands into complex types you might not expect.
+  Use JSON.parse + a schema validator (zod) for untrusted input.
+fix_strategy: suggest_only

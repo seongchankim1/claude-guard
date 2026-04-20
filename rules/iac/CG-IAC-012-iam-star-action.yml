@@ -1,0 +1,16 @@
+id: CG-IAC-012
+title: "IAM policy with Action: '*' or Resource: '*'"
+severity: HIGH
+category: iac
+patterns:
+  - regex: "[\"'](Action|Resource)[\"']\\s*:\\s*[\"']\\*[\"']"
+    files:
+      - "**/*.tf"
+      - "**/*.json"
+      - "**/*.yml"
+      - "**/*.yaml"
+context_hint: |
+  `Action: '*'` or `Resource: '*'` grants full access. Narrow to the
+  specific verbs + ARNs the identity needs; wildcard policies are a
+  common path from minor IAM compromise to full account takeover.
+fix_strategy: suggest_only

@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.7.0 — 2026-04-20 — 150-rule milestone
+
+### Added
+- **CSV export**: `claude-guard csv` prints findings as CSV (rule_id, severity, category, file, line, column, message, evidence, fix_strategy, source_engine). Opens cleanly in Excel, Google Sheets, `csvkit`, `duckdb`, etc.
+- **+10 rules**, for a total of **150**:
+  - `CG-CFG-055` — tRPC `publicProcedure.mutation(…)` (no auth on a state-changing endpoint)
+  - `CG-CFG-056` — `axios.create` with TLS verification disabled
+  - `CG-AUTH-022` — password-reset handler returns the token in the response body
+  - `CG-CFG-057` — HSTS `max-age` under one year
+  - `CG-CFG-058` — `public/robots.txt` with `Disallow: /`
+  - `CG-LLM-016` — LLM tool input schema with a freeform `type: string` (no enum/pattern)
+  - `CG-SEC-019` — committed `.vercel/.env.*.local`
+  - `CG-CFG-059` — `node-serialize` imported at all (RCE-prone, CVE-2017-5941)
+  - `CG-SQL-010` — Drizzle `sql.raw(var)` with a non-literal argument
+  - `CG-IAC-012` — IAM policy with `Action: "*"` or `Resource: "*"`
+
 ## 1.6.0 — 2026-04-20
 
 ### Added

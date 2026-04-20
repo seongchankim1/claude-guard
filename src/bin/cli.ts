@@ -8,6 +8,7 @@ import { renderRulesCatalogMd } from "../rules-catalog.js";
 import { findingsToSarif } from "../sarif.js";
 import { renderHtmlReport } from "../html-report.js";
 import { renderJunitXml } from "../junit.js";
+import { renderCsv } from "../csv.js";
 import { installGitHook } from "../install-hooks.js";
 import { captureBaseline, loadBaseline, diffFindings } from "../baseline.js";
 import { summarize } from "../stats.js";
@@ -33,6 +34,7 @@ Usage:
   claude-guard badge [path]          Emit shields.io endpoint JSON for the latest scan
   claude-guard sarif [path]          Emit SARIF 2.1.0 for the latest scan (GitHub Code Scanning)
   claude-guard junit [path]          Emit JUnit XML for CI systems that grok it
+  claude-guard csv [path]            Emit findings as CSV (spreadsheet-friendly)
   claude-guard report [path] [--open]   Write a self-contained HTML report; --open launches the browser
   claude-guard watch [path]          Rescan on file change (debounced)
   claude-guard install-hooks [path]  Install a pre-commit hook that blocks CRITICAL findings in staged files
@@ -257,6 +259,18 @@ async function main(argv: string[]): Promise<number> {
     }
     const findings = await loadFindings(projectPath, sid);
     process.stdout.write(renderJunitXml(findings));
+    return 0;
+  }
+
+  if (cmd === "csv") {
+    const projectPath = resolve(rest[0] ?? ".");
+    const sid = await latestScanId(projectPath);
+    if (!sid) {
+      process.stderr.write("No scans yet. Run `claude-guard scan` first.\n");
+      return 1;
+    }
+    const findings = await loadFindings(projectPath, sid);
+    process.stdout.write(renderCsv(findings));
     return 0;
   }
 
