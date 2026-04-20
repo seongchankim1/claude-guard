@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.0 — 2026-04-20
+
+### Added
+- **Enriched `examples/vulnerable-next-app`**. It now has 15+ files covering a realistic Next.js stack: `middleware.ts`, API routes for `/session`, `/upload`, `/chat`, `/search`, `/webhook`, a `next.config.js` that leaks a secret, a broken `firestore.rules`, a Terraform file with an open S3 + SG, and a bad Dockerfile. A clean scan of the demo now reports **22 findings, Grade F, 0/100**.
+- **`examples/claude-guard-plugin-example/`** — a reference community plugin package. Demonstrates the manifest (`claude-guard-plugin.yml`), the rule-file layout under `rules/`, and a plugin-scoped rule id (`ACME-INT-001`). Ready to fork into a `claude-guard-plugin-*` npm package.
+- **+5 rules**, for a total of 135:
+  - `CG-CFG-049` — leftover `debugger` statement / Node `--inspect` port
+  - `CG-CFG-050` — `fetch()` to external URL without an AbortSignal timeout
+  - `CG-AUTH-020` — password-reset token generated with `Math.random().toString(36)`
+  - `CG-LLM-015` — `"use client"` module that imports an LLM SDK (bundles to the browser)
+  - `CG-IAC-011` — GitHub Actions workflow with `permissions: write-all`
+
 ## 1.4.0 — 2026-04-20
 
 ### Added

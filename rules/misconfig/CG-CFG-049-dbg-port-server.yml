@@ -1,0 +1,20 @@
+id: CG-CFG-049
+title: "Node debug port opened (--inspect / --inspect-brk / debugger statement)"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "^\\s*debugger;?\\s*$"
+    files:
+      - "**/*.{js,ts,jsx,tsx}"
+  - regex: "--inspect(-brk)?(=0\\.0\\.0\\.0)?"
+    files:
+      - "**/package.json"
+      - "**/Dockerfile"
+      - "**/docker-compose*.yml"
+      - "**/.env*"
+context_hint: |
+  A forgotten debugger statement pauses production on first hit, and
+  an --inspect port bound to 0.0.0.0 exposes a full V8 remote debugger
+  to the network. Remove both from shipping code and deployment manifests.
+fix_strategy: suggest_only

@@ -7,7 +7,7 @@
 ![mcp](https://img.shields.io/badge/MCP-stdio-purple)
 
 - One-line install. **Zero API keys. Zero network calls by default. Zero outbound telemetry.**
-- **130 builtin rules** across secrets, SQL/NoSQL injection, XSS, auth, LLM-specific risks, misconfiguration, Docker, and IaC. Detects across **10 languages** via an optional Semgrep adapter.
+- **135 builtin rules** across secrets, SQL/NoSQL injection, XSS, auth, LLM-specific risks, misconfiguration, Docker, and IaC. Detects across **10 languages** via an optional Semgrep adapter.
 - **SARIF 2.1.0 export** — drop findings straight into the GitHub Security tab via `github/codeql-action/upload-sarif`.
 - **Security scorecard.** Every scan produces a 0–100 score and an A+…F grade, rendered at the top of `findings.md` and available as its own MCP tool, CLI command, and shields.io-compatible endpoint badge.
 - **Checkbox-based approval.** `claude-guard` writes a `findings.md` grouped by severity. You toggle `[x]` on the items you want fixed, then run `apply_fixes`. Nothing else is touched.
@@ -92,14 +92,14 @@ Run claude-guard against the deliberately-broken Next.js demo app included in th
 ```bash
 $ npx claude-guard scan ./examples/vulnerable-next-app
 {
-  "scan_id": "8e4c8731-…",
-  "finding_count": 6,
-  "duration_ms": 56,
+  "scan_id": "747d5448-…",
+  "finding_count": 22,
+  "duration_ms": 76,
   "layers_run": ["l1", "l2"],
-  "summary_by_severity": { "CRITICAL": 4, "HIGH": 2, "MEDIUM": 0, "LOW": 0 },
+  "summary_by_severity": { "CRITICAL": 11, "HIGH": 7, "MEDIUM": 2, "LOW": 2 },
   "scorecard": {
-    "score": 4, "grade": "F",
-    "headline": "Grade F — score 4/100 (4 CRITICAL, 2 HIGH)"
+    "score": 0, "grade": "F",
+    "headline": "Grade F — score 0/100 (11 CRITICAL, 7 HIGH, 2 MEDIUM, 2 LOW)"
   }
 }
 ```
@@ -165,7 +165,7 @@ In any MCP client, in plain language:
 
 ## Builtin rules
 
-**130 rules** across eight categories, targeting the failure modes we see most often in AI-generated web code:
+**135 rules** across eight categories, targeting the failure modes we see most often in AI-generated web code:
 
 | category | count | representative rules |
 |---|---|---|
@@ -241,7 +241,7 @@ Run `init_config` to create this file with defaults.
 | SARIF 2.1.0 output | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Security grade / scorecard | ✅ | — | — | partial | ✅ |
 | Opt-in loopback-only PoC probe | ✅ | — | — | — | — |
-| Rule catalogue size | 130 | 2000+ | secrets-only | thousands | thousands |
+| Rule catalogue size | 135 | 2000+ | secrets-only | thousands | thousands |
 
 claude-guard is intentionally small and opinionated for one audience: people shipping AI-generated code who need fast, actionable, fix-oriented feedback inside their agent. It is complementary to Semgrep / Sonar / Snyk, not a replacement — run it alongside.
 

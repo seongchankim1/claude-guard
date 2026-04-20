@@ -1,0 +1,15 @@
+id: CG-IAC-011
+title: "GitHub Actions workflow uses default GITHUB_TOKEN permissions: write-all"
+severity: MEDIUM
+category: iac
+patterns:
+  - regex: "permissions\\s*:\\s*write-all"
+    files:
+      - "**/.github/workflows/**/*.yml"
+      - "**/.github/workflows/**/*.yaml"
+context_hint: |
+  `permissions: write-all` is the widest possible token scope. Any
+  hostile action inside the workflow can edit contents, approve PRs,
+  and cut releases. Default to `permissions: read-all` at the workflow
+  level and opt in per job / step only when needed.
+fix_strategy: suggest_only

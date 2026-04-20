@@ -1,0 +1,11 @@
+// INTENTIONALLY VULNERABLE — for claude-guard demos only.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Wide-open policy (CG-CFG-003)
+    match /posts/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

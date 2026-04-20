@@ -1,0 +1,14 @@
+id: ACME-INT-001
+title: "Internal acme-corp.int hostname referenced from frontend bundle"
+severity: MEDIUM
+category: other
+patterns:
+  - regex: "https?://[a-zA-Z0-9-]+\\.acme-corp\\.int"
+    files:
+      - "**/*.{js,ts,jsx,tsx}"
+      - "**/*.html"
+context_hint: |
+  Internal hostnames in a frontend bundle leak architecture details
+  (service names, datacenter, staging URLs) and give attackers a map
+  of things to probe later. Reference via a gateway / short alias.
+fix_strategy: suggest_only
