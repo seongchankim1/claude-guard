@@ -1,0 +1,16 @@
+id: CG-CFG-010
+title: "Iframe rendered with src from user input"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "<iframe[^>]*src=\\{[^}]+\\}"
+    files:
+      - "**/*.jsx"
+      - "**/*.tsx"
+      - "**/*.vue"
+context_hint: |
+  Rendering an iframe src from user input enables UI redressing,
+  clickjacking, and phishing via a familiar-looking wrapper. Restrict to
+  an explicit allowlist of origins, and set sandbox attributes.
+fix_strategy: suggest_only

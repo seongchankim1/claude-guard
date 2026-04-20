@@ -1,0 +1,18 @@
+id: CG-XSS-004
+title: "href / src set to javascript: scheme"
+severity: HIGH
+category: xss
+languages: [javascript, typescript]
+patterns:
+  - regex: "(href|src)\\s*=\\s*[\\{\\(]?\\s*[`'\"][^`'\"]*javascript:"
+    files:
+      - "**/*.jsx"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.html"
+context_hint: |
+  javascript: URLs execute in the origin of the rendering page. If the
+  value is ever attacker-controlled, it becomes XSS. Avoid
+  javascript: entirely; for dynamic navigation use event handlers.
+fix_strategy: suggest_only

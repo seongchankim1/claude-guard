@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0 — 2026-04-20
+
+### Added
+- **Diff mode**: `claude-guard scan --diff=main` scans only files changed vs the given base ref (triple-dot range + working tree + untracked). Perfect for PR gates where a full-repo scan would be noise. Works via the same `scan()` API — passing `diff_base` to the MCP tool works too.
+- **HTML report** (`claude-guard report`) — self-contained, grade-colored, collapsible per-finding. Drop it into a PR comment or Slack with one attachment.
+- **Ignore system** — `.claude-guard/ignore.yml` supports `rule_id`, `file`, `line` filters with wildcards on rule IDs and directory prefixes on file paths. Applies before the severity threshold.
+- **Fourth AST-based fix**: `wrap_with_authz_guard` — for Next.js Server Action files flagged by `CG-CFG-006`, injects an `auth()` import (if missing) and prepends an `await auth()` + `if (!session) throw` guard to every exported async action. Skips files that already have a visible auth reference.
+- **10 more rules**, bringing the total to 42: cloud-metadata SSRF (AWS/GCP/Azure), user-driven iframe src, Dockerfile apt-get without `--no-install-recommends`, Dockerfile `:latest`, Terraform `0.0.0.0/0` security groups, Terraform public S3 ACL, LLM output rendered as raw HTML, insecure RNG for tokens/secrets/passwords, GCP service-account JSON committed, `href="javascript:…"` sinks.
+
+### Changed
+- `CG-CFG-006` (Next.js Server Action without auth) default fix strategy is now `wrap_with_authz_guard` (was `suggest_only`).
+
 ## 0.4.0 — 2026-04-20
 
 ### Added

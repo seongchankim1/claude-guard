@@ -1,0 +1,13 @@
+id: CG-IAC-002
+title: "Terraform S3 bucket ACL is public-read or public-read-write"
+severity: HIGH
+category: iac
+patterns:
+  - regex: "acl\\s*=\\s*[\"'](public-read|public-read-write|authenticated-read)[\"']"
+    files:
+      - "**/*.tf"
+context_hint: |
+  Public ACLs on S3 buckets expose all object listings and contents to
+  the world. Use presigned URLs, a CloudFront distribution, or a private
+  bucket with scoped IAM policies instead.
+fix_strategy: suggest_only

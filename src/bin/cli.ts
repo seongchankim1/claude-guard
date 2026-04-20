@@ -6,6 +6,7 @@ import { scoreFindings, renderScorecardMd } from "../scorecard.js";
 import { scorecardToBadge } from "../badge.js";
 import { renderRulesCatalogMd } from "../rules-catalog.js";
 import { findingsToSarif } from "../sarif.js";
+import { renderHtmlReport } from "../html-report.js";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, resolve } from "path";
@@ -15,10 +16,12 @@ import type { Finding } from "../types.js";
 const HELP = `claude-guard — CLI
 Usage:
   claude-guard scan [path]           Run scan (default: cwd)
+  claude-guard scan [path] --diff=main   Scan only files changed vs the given base ref
   claude-guard list [path]           Render findings.md for latest scan
   claude-guard score [path]          Show grade/score for latest scan
   claude-guard badge [path]          Emit shields.io endpoint JSON for the latest scan
   claude-guard sarif [path]          Emit SARIF 2.1.0 for the latest scan (GitHub Code Scanning)
+  claude-guard report [path]         Write a self-contained HTML report to .claude-guard/report.html
   claude-guard watch [path]          Rescan on file change (debounced)
   claude-guard explain <id> [path]   Show details for a finding
   claude-guard rules                 List active builtin rules
@@ -47,8 +50,11 @@ async function main(argv: string[]): Promise<number> {
   }
 
   if (cmd === "scan") {
-    const projectPath = resolve(rest[0] ?? ".");
-    const r = await scan(projectPath, { layers: ["l1", "l2"] });
+    const positional = rest.filter((s) => !s.startsWith("--"));
+    const diffFlag = rest.find((s) => s.startsWith("--diff="));
+    const diff_base = diffFlag ? diffFlag.slice("--diff=".length) : undefined;
+    const projectPath = resolve(positional[0] ?? ".");
+    const r = await scan(projectPath, { layers: ["l1", "l2"], diff_base });
     const card = scoreFindings(r.findings);
     process.stdout.write(
       JSON.stringify(
@@ -130,6 +136,22 @@ async function main(argv: string[]): Promise<number> {
   if (cmd === "watch") {
     const projectPath = resolve(rest[0] ?? ".");
     await runWatch(projectPath);
+    return 0;
+  }
+
+  if (cmd === "report") {
+    const projectPath = resolve(rest[0] ?? ".");
+    const sid = await latestScanId(projectPath);
+    if (!sid) {
+      process.stderr.write("No scans yet. Run `claude-guard scan` first.\n");
+      return 1;
+    }
+    const findings = await loadFindings(projectPath, sid);
+    const html = renderHtmlReport(sid, findings);
+    const outPath = join(projectPath, ".claude-guard/report.html");
+    await mkdir(join(projectPath, ".claude-guard"), { recursive: true });
+    await writeFile(outPath, html);
+    process.stdout.write(`Wrote ${outPath}\n`);
     return 0;
   }
 

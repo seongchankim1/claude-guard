@@ -13,4 +13,4 @@ context_hint: |
   second look — Server Actions run with full backend privileges and are
   invokable by any client. Ensure every mutating action authenticates
   the caller (getUser / auth() / cookies()-based session) before acting.
-fix_strategy: suggest_only
+fix_strategy: wrap_with_authz_guard

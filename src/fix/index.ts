@@ -4,6 +4,7 @@ import { suggestOnly } from "./suggest-only.js";
 import { setCookieFlags } from "./set-cookie-flags.js";
 import { splitServerOnly } from "./split-server-only.js";
 import { parameterizeQuery } from "./parameterize-query.js";
+import { wrapWithAuthzGuard } from "./wrap-with-authz-guard.js";
 
 export type { Finding };
 
@@ -28,6 +29,8 @@ export async function applyFix(
       return splitServerOnly(projectPath, f);
     case "parameterize_query":
       return parameterizeQuery(projectPath, f);
+    case "wrap_with_authz_guard":
+      return wrapWithAuthzGuard(projectPath, f);
     case "suggest_only":
     case undefined:
     default:

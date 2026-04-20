@@ -1,0 +1,19 @@
+id: CG-CFG-009
+title: "Fetch to cloud metadata IP (169.254.169.254 or equivalents)"
+severity: CRITICAL
+category: misconfig
+patterns:
+  - regex: "169\\.254\\.169\\.254|metadata\\.google\\.internal|metadata\\.azure\\.com"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.py"
+      - "**/*.go"
+      - "**/*.rb"
+context_hint: |
+  Reaching the cloud metadata service from application code is how SSRF
+  attacks turn into IAM credential theft on AWS, GCP, and Azure. There is
+  almost never a legitimate reason an application fetches this URL —
+  block it at the HTTP-client layer, and if you genuinely need instance
+  metadata, use the SDK rather than raw fetch.
+fix_strategy: suggest_only

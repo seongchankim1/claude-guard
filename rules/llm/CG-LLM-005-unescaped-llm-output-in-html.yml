@@ -1,0 +1,19 @@
+id: CG-LLM-005
+title: "LLM output rendered as raw HTML without sanitization"
+severity: HIGH
+category: llm
+languages: [javascript, typescript]
+patterns:
+  - regex: "dangerouslySetInnerHTML\\s*=\\s*\\{\\s*\\{\\s*__html:\\s*(completion|response|message|content|output|result|choices|assistant)"
+    files:
+      - "**/*.jsx"
+      - "**/*.tsx"
+  - regex: "\\.innerHTML\\s*=\\s*(completion|response|message|content|output|result|choices|assistant)"
+    files:
+      - "**/*.js"
+      - "**/*.ts"
+context_hint: |
+  Model output is untrusted because prompts are attacker-controllable
+  (prompt injection, RAG poisoning). Render as text, or run through a
+  HTML sanitizer like DOMPurify before inserting.
+fix_strategy: suggest_only

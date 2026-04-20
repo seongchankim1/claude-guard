@@ -8,10 +8,13 @@ import { loadAllowedPlugins } from "./rules/plugin-loader.js";
 import { runL2, dedupe } from "./engines/l2-native.js";
 import { runSemgrep } from "./engines/l1-semgrep.js";
 import { runGitleaks } from "./engines/l1-gitleaks.js";
+import { changedFiles } from "./diff.js";
+import { loadIgnore, filterIgnored } from "./ignore.js";
 import type { Finding, Layer, ScanResult, Severity } from "./types.js";
 
 export interface ScanOptions {
   layers?: Layer[];
+  diff_base?: string;
 }
 
 export interface FullScanResult extends ScanResult {
@@ -47,7 +50,16 @@ export async function scan(
     }
     all.push(...(await runL2(projectPath, rules)));
   }
-  const findings = dedupe(all);
+  let findings = dedupe(all);
+
+  if (opts.diff_base) {
+    const diff = await changedFiles(projectPath, opts.diff_base);
+    const allowed = new Set(diff.files);
+    findings = findings.filter((f) => allowed.has(f.file));
+  }
+
+  const ignoreEntries = await loadIgnore(projectPath);
+  findings = filterIgnored(findings, ignoreEntries);
 
   const threshold = severityRank(config.severity_threshold);
   const filtered = findings.filter(
