@@ -1,0 +1,19 @@
+id: CG-CFG-035
+title: "WebSocket server with verifyClient that returns true"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "verifyClient\\s*:\\s*\\([^)]*\\)\\s*=>\\s*true"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+  - regex: "verifyClient\\s*:\\s*function[^{]*\\{\\s*return\\s+true"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  A WebSocket server that accepts any client origin is the WebSocket
+  equivalent of CORS *. Validate the request Origin header against an
+  explicit allowlist and reject non-matches with 403.
+fix_strategy: suggest_only

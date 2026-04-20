@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.0 — 2026-04-20
+
+### Added
+- **Scan trend history**. Every `scan` appends to `.claude-guard/history.json` (capped at 100 entries). `claude-guard trend` renders a markdown table with grade, score, finding count, and duration per scan, plus the delta from first to latest.
+- **+10 rules**, for a total of 110:
+  - `CG-CFG-034` — CRLF injection via `setHeader(value from req.*)`
+  - `CG-CFG-035` — WebSocket `verifyClient` that always returns true
+  - `CG-CFG-036` — temp file path built from `Math.random`
+  - `CG-AUTH-016` — cookie `maxAge` longer than one year
+  - `CG-CFG-037` — Python model `load()` piped through `urlopen` / `requests`
+  - `CG-LLM-012` — prompt template path chosen by request input
+  - `CG-CFG-038` — Apollo Server without persisted queries / cost guard
+  - `CG-SEC-016` — MongoDB URI with inline `user:password`
+  - `CG-AUTH-017` — login response that distinguishes "no such email"
+  - `CG-IAC-009` — Kubernetes Secret with inline `stringData` credentials
+
 ## 1.1.0 — 2026-04-20
 
 ### Added

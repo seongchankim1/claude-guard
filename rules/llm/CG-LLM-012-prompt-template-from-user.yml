@@ -1,0 +1,17 @@
+id: CG-LLM-012
+title: "Prompt template file path or body built from request input"
+severity: HIGH
+category: llm
+languages: [javascript, typescript, python]
+patterns:
+  - regex: "(readFile|readFileSync|open)\\s*\\([^)]*(prompts|templates)[^)]*(req|request)\\.(body|query|params)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+      - "**/*.py"
+context_hint: |
+  Loading a prompt template whose path is chosen by the user lets an
+  attacker pick any file on disk, and then prompt-injection happens in
+  your own voice. Keep templates in a fixed set, look them up by a
+  strict enum key, and never accept a path.
+fix_strategy: suggest_only

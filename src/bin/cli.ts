@@ -13,6 +13,7 @@ import { captureBaseline, loadBaseline, diffFindings } from "../baseline.js";
 import { summarize } from "../stats.js";
 import { runInit } from "../init.js";
 import { suppressFinding } from "../suppress.js";
+import { loadHistory, renderTrendMd } from "../history.js";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, resolve } from "path";
@@ -36,6 +37,7 @@ Usage:
   claude-guard stats [path]          Rule hit frequency, top files, category breakdown for the latest scan
   claude-guard init [path] [--dry]   Detect stack, write .claude-guard/config.yaml with smart severity overrides
   claude-guard suppress <finding_id> [path] [--reason="…"]   Add an entry to .claude-guard/ignore.yml for this finding
+  claude-guard trend [path]          Show scan history: grade, score, finding count per scan
   claude-guard explain <id> [path]   Show details for a finding
   claude-guard rules                 List active builtin rules
   claude-guard docs                  Print a markdown catalogue of every active rule
@@ -245,6 +247,13 @@ async function main(argv: string[]): Promise<number> {
         ? `Added ${target.rule_id} @ ${target.file}:${target.range.startLine} to ${r.path}\n`
         : `No-op: ${r.reason ?? "already present"} at ${r.path}\n`
     );
+    return 0;
+  }
+
+  if (cmd === "trend") {
+    const projectPath = resolve(rest[0] ?? ".");
+    const history = await loadHistory(projectPath);
+    process.stdout.write(renderTrendMd(history));
     return 0;
   }
 

@@ -1,0 +1,16 @@
+id: CG-CFG-038
+title: "Apollo Server configured without persistedQueries / cost limit"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "new\\s+ApolloServer\\s*\\(\\s*\\{[\\s\\S]{0,600}\\}\\s*\\)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Ungated GraphQL endpoints let clients send arbitrarily expensive
+  queries (depth, breadth, batched arrays). Configure persistedQueries
+  or a cost-limit plugin (graphql-cost-analysis, apollo-server-plugin-
+  operation-registry) and enforce a max-depth.
+fix_strategy: suggest_only

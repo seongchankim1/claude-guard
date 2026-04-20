@@ -1,0 +1,14 @@
+id: CG-CFG-036
+title: "Temp-file path built from Math.random without atomic creation"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "(/tmp/|os\\.tmpdir\\(\\)[^)]*)[^\\n]{0,80}Math\\.random"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Predictable temp paths invite symlink races. Use fs.mkdtemp() / tmp
+  package, which creates the directory atomically with a random name.
+fix_strategy: suggest_only

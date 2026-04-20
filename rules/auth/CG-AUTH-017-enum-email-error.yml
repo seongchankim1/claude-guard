@@ -1,0 +1,16 @@
+id: CG-AUTH-017
+title: "Login response reveals whether the email exists"
+severity: MEDIUM
+category: auth
+languages: [javascript, typescript]
+patterns:
+  - regex: "\\b(message|error|msg)\\s*:\\s*[\"'](user not found|email not found|no such user|email does not exist|unknown email)[\"']"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Distinct error messages for "no such user" vs "wrong password" let an
+  attacker enumerate registered emails. Return the same generic
+  "invalid credentials" message in both cases and log the exact reason
+  server-side only.
+fix_strategy: suggest_only

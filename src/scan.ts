@@ -12,6 +12,7 @@ import { changedFiles } from "./diff.js";
 import { loadIgnore, filterIgnored } from "./ignore.js";
 import { filterByInlineDisables } from "./inline-disable.js";
 import { loadBaseline, filterAgainstBaseline } from "./baseline.js";
+import { recordScanHistory } from "./history.js";
 import type { Finding, Layer, ScanResult, Severity } from "./types.js";
 
 export interface ScanOptions {
@@ -114,10 +115,13 @@ export async function scan(
   };
   for (const f of filtered) summary[f.severity]++;
 
+  const duration_ms = Date.now() - t0;
+  await recordScanHistory(projectPath, scan_id, filtered, duration_ms);
+
   return {
     scan_id,
     finding_count: filtered.length,
-    duration_ms: Date.now() - t0,
+    duration_ms,
     layers_run: layers,
     summary_by_severity: summary,
     findings: filtered,
