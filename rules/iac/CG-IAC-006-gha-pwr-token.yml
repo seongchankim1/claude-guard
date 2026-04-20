@@ -1,0 +1,14 @@
+id: CG-IAC-006
+title: "GitHub Actions workflow declares contents: write or pull-requests: write"
+severity: MEDIUM
+category: iac
+patterns:
+  - regex: "permissions\\s*:[\\s\\S]{0,200}(contents|pull-requests|actions|id-token)\\s*:\\s*write"
+    files:
+      - "**/.github/workflows/**/*.yml"
+      - "**/.github/workflows/**/*.yaml"
+context_hint: |
+  Broad write permissions on a workflow turn any compromised action into
+  a repo-wide takeover primitive. Start with permissions: read-all at
+  the workflow level and only widen at the job or step that needs it.
+fix_strategy: suggest_only

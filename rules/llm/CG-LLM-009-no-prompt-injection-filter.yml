@@ -1,0 +1,17 @@
+id: CG-LLM-009
+title: "Agent tool call handler trusts LLM output to run shell / HTTP"
+severity: HIGH
+category: llm
+languages: [javascript, typescript]
+patterns:
+  - regex: "tool_use.{0,300}(exec|spawn|fetch|axios\\.(get|post|put|delete)|readFile)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  If a tool-use handler shells out or makes network requests based on
+  model-supplied arguments, a prompt injection is enough to trigger
+  real-world side effects. Validate tool_use.input against a Zod
+  schema AND check the call against an explicit allowlist before
+  running.
+fix_strategy: suggest_only

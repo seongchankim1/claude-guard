@@ -1,0 +1,14 @@
+id: CG-IAC-005
+title: "GitHub Actions step interpolates ${{ github.event.* }} into run:"
+severity: CRITICAL
+category: iac
+patterns:
+  - regex: "run\\s*:\\s*[^\\n]*\\$\\{\\{\\s*github\\.event\\.(issue|pull_request|comment|review)\\."
+    files:
+      - "**/.github/workflows/**/*.yml"
+      - "**/.github/workflows/**/*.yaml"
+context_hint: |
+  Interpolating untrusted fields from github.event into a run: block is
+  arbitrary shell execution on the runner. Move the value into an env:
+  var and reference it in-shell as "$VAR" — that path is safe.
+fix_strategy: suggest_only

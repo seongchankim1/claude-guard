@@ -11,6 +11,8 @@ import { renderJunitXml } from "../junit.js";
 import { installGitHook } from "../install-hooks.js";
 import { captureBaseline, loadBaseline, diffFindings } from "../baseline.js";
 import { summarize } from "../stats.js";
+import { runInit } from "../init.js";
+import { suppressFinding } from "../suppress.js";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, resolve } from "path";
@@ -32,6 +34,8 @@ Usage:
   claude-guard baseline [path]       Capture current findings as a baseline; future scans only report new ones
   claude-guard diff-scans <a> <b> [path]   Compare two scan_ids: what was introduced, resolved, unchanged
   claude-guard stats [path]          Rule hit frequency, top files, category breakdown for the latest scan
+  claude-guard init [path] [--dry]   Detect stack, write .claude-guard/config.yaml with smart severity overrides
+  claude-guard suppress <finding_id> [path] [--reason="…"]   Add an entry to .claude-guard/ignore.yml for this finding
   claude-guard explain <id> [path]   Show details for a finding
   claude-guard rules                 List active builtin rules
   claude-guard docs                  Print a markdown catalogue of every active rule
@@ -201,6 +205,45 @@ async function main(argv: string[]): Promise<number> {
     const path = await captureBaseline(projectPath, sid, findings);
     process.stdout.write(
       `Wrote ${path} — ${findings.length} finding(s) captured as baseline. Future scans will only report NEW findings.\n`
+    );
+    return 0;
+  }
+
+  if (cmd === "init") {
+    const positional = rest.filter((s) => !s.startsWith("--"));
+    const dry = rest.includes("--dry");
+    const projectPath = resolve(positional[0] ?? ".");
+    const r = await runInit({ projectPath, write: !dry });
+    process.stdout.write(r.summary + "\n");
+    return 0;
+  }
+
+  if (cmd === "suppress") {
+    const positional = rest.filter((s) => !s.startsWith("--"));
+    const reasonFlag = rest.find((s) => s.startsWith("--reason="));
+    const reason = reasonFlag ? reasonFlag.slice("--reason=".length) : undefined;
+    const id = positional[0];
+    if (!id) {
+      process.stderr.write("Usage: claude-guard suppress <finding_id> [path] [--reason=\"...\"]\n");
+      return 1;
+    }
+    const projectPath = resolve(positional[1] ?? ".");
+    const sid = await latestScanId(projectPath);
+    if (!sid) {
+      process.stderr.write("No scans yet.\n");
+      return 1;
+    }
+    const findings = await loadFindings(projectPath, sid);
+    const target = findings.find((f) => f.id === id);
+    if (!target) {
+      process.stderr.write(`Finding not found: ${id}\n`);
+      return 1;
+    }
+    const r = await suppressFinding(projectPath, target, reason);
+    process.stdout.write(
+      r.added
+        ? `Added ${target.rule_id} @ ${target.file}:${target.range.startLine} to ${r.path}\n`
+        : `No-op: ${r.reason ?? "already present"} at ${r.path}\n`
     );
     return 0;
   }

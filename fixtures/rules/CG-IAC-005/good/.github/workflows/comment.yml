@@ -1,0 +1,9 @@
+name: comment
+on: issue_comment
+jobs:
+  reply:
+    runs-on: ubuntu-latest
+    env:
+      COMMENT_BODY: ${{ github.event.comment.body }}
+    steps:
+      - run: echo "got $COMMENT_BODY"

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0 — 2026-04-20
+
+### Added
+- **`claude-guard init`** — detects your stack from `package.json` / `requirements.txt` / `Dockerfile` / Terraform / Kubernetes manifests, then writes `.claude-guard/config.yaml` with severity overrides that demote rules for stacks you do not use (e.g. Terraform rules go `LOW` if there are no `.tf` files). Does not overwrite an existing config. `--dry` to preview without writing.
+- **`claude-guard suppress <finding_id>`** — writes the finding into `.claude-guard/ignore.yml` with an optional `--reason="…"`. No-op on duplicates.
+- **+10 rules**, for a total of 80: JWT verify accepts `alg: "none"`, GraphQL introspection on in prod, Redis URL without password, mass-assignment (ORM `create({ data: req.body })`), session/token in `localStorage` / `sessionStorage`, `eval` / `new Function` on a template literal, secret-shaped tokens in test fixtures, agent tool handlers that shell out on model-supplied input, GitHub Actions `run:` with `${{ github.event.* }}` interpolation, GitHub Actions workflow with broad write permissions.
+
 ## 0.8.0 — 2026-04-20
 
 ### Added

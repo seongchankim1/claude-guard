@@ -1,0 +1,18 @@
+id: CG-CFG-024
+title: "Redis client connects without a password"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript, python]
+patterns:
+  - regex: "createClient\\s*\\(\\s*\\{\\s*url\\s*:\\s*[\"']redis:\\/\\/(?!.*:[^@]+@)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+  - regex: "redis\\.Redis\\s*\\([^)]*\\)(?![\\s\\S]{0,200}password)"
+    files:
+      - "**/*.py"
+context_hint: |
+  A Redis URL without a password means the server accepts any client
+  that can reach the port. Deploy Redis with AUTH, use a strong
+  password, and pull it from env/secret manager.
+fix_strategy: suggest_only
