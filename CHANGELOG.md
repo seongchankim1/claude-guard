@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.4.0 — 2026-04-20
+
+### Added
+- **Color terminal output** for `claude-guard scan`. On a TTY it prints a color-coded grade badge, the scorecard headline, and a one-line severity breakdown. Respects `NO_COLOR=1` and `TERM=dumb`. `--json` forces machine output even on a TTY.
+- **`claude-guard fix`** — one-shot shortcut that runs `scan` then `apply_fixes --mode=all_safe` in the same invocation. Great for `claude-guard fix && git diff` workflows.
+- **+10 rules**, for a total of 130:
+  - `CG-CFG-043` — CSP with `unsafe-inline` / `unsafe-eval`
+  - `CG-CFG-044` — Python `subprocess.run(..., shell=True)`
+  - `CG-CFG-045` — Express `body-parser` / `express.json()` without a size limit
+  - `CG-SEC-018` — committed `.npmrc` with a real `_authToken`
+  - `CG-AUTH-019` — Next.js middleware matcher with a negative group that excludes a protected route
+  - `CG-XSS-010` — marked / markdown-it with `html: true` or `sanitize: false`
+  - `CG-CFG-046` — `@ts-ignore` / `@ts-nocheck` on auth/session/middleware files
+  - `CG-CFG-047` — `.env` or private-key file under `public/` or `static/`
+  - `CG-CFG-048` — preflight `Allow-Headers` reflecting the request-headers header
+  - `CG-LLM-014` — streaming LLM response without a per-request char cap
+
 ## 1.3.0 — 2026-04-20
 
 ### Added

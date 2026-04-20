@@ -1,0 +1,3 @@
+export const headers = {
+  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'",
+};

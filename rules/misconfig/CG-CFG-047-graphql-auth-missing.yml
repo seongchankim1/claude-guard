@@ -1,0 +1,21 @@
+id: CG-CFG-047
+title: "Secret-looking file placed under a public/ or static/ directory"
+severity: HIGH
+category: misconfig
+patterns:
+  - regex: "^[A-Z][A-Z0-9_]*(SECRET|KEY|TOKEN|PASSWORD|PRIVATE)"
+    files:
+      - "**/public/.env*"
+      - "**/public/**/*.env*"
+      - "**/static/.env*"
+      - "**/static/**/*.env*"
+  - regex: "-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY"
+    files:
+      - "**/public/**"
+      - "**/static/**"
+context_hint: |
+  Files under public/ and static/ are served verbatim by the framework.
+  Dropping .env or a private key there publishes it to the internet.
+  Move credentials to a server-only path and ensure your CI does not
+  copy them into the build output.
+fix_strategy: suggest_only

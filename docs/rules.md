@@ -1,8 +1,8 @@
 # claude-guard rule catalogue
 
-120 active builtin rules.
+130 active builtin rules.
 
-## Authentication & sessions (18)
+## Authentication & sessions (19)
 
 ### CG-AUTH-001 — JWT signing secret is a short literal
 - **Severity:** HIGH
@@ -172,6 +172,15 @@
 > hashed-password lookup, and replace the whole mechanism with session
 > cookies + a real auth provider once you can.
 
+### CG-AUTH-019 — Next.js middleware matcher excludes a protected route by mistake
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Negative matchers that exclude a protected path from middleware leave
+> that route un-gated. Invert the policy: middleware runs on everything
+> by default and explicitly skips only clearly-public paths.
+
 ## Docker (2)
 
 ### CG-DOCKER-001 — Dockerfile installs packages without --no-install-recommends
@@ -278,7 +287,7 @@
 > instance in private subnets and reach it via VPC peering, VPN, or a
 > bastion.
 
-## LLM / AI-specific risks (13)
+## LLM / AI-specific risks (14)
 
 ### CG-LLM-001 — User input interpolated into a system/role prompt
 - **Severity:** HIGH
@@ -411,7 +420,17 @@
 > "treat-as-data" delimiter, and consider a secondary-call filter that
 > rejects prompt-override attempts before the answer is returned.
 
-## Misconfiguration (42)
+### CG-LLM-014 — Streaming LLM response piped to client without a per-request char cap
+- **Severity:** LOW
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Streaming without a total-output cap on the server lets a malicious
+> prompt exhaust tokens and bandwidth. Track bytes written per request
+> and abort the stream after a sane cap (e.g. 32KB for chat, higher
+> for purpose-built generators).
+
+## Misconfiguration (48)
 
 ### CG-CFG-001 — CORS Access-Control-Allow-Origin set to '*'
 - **Severity:** HIGH
@@ -810,6 +829,60 @@
 > Always set X-Content-Type-Options: nosniff and serve uploads from a
 > sandbox origin.
 
+### CG-CFG-043 — Content-Security-Policy includes 'unsafe-inline' or 'unsafe-eval'
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> 'unsafe-inline' and 'unsafe-eval' effectively disable CSP protection
+> against XSS. Use nonces ('nonce-{random}') or hashes for any inline
+> script, and avoid eval entirely.
+
+### CG-CFG-044 — Python subprocess called with shell=True
+- **Severity:** HIGH
+- **Languages:** python
+- **Fix strategy:** `suggest_only`
+
+> shell=True expands the command string via /bin/sh. If any part of
+> that string comes from user input, it's arbitrary shell execution.
+> Pass a list argv and shell=False (the default on most calls).
+
+### CG-CFG-045 — Express body-parser / express.json() without a size limit
+- **Severity:** LOW
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> A missing limit defaults to ~100kb which is fine, but if you've
+> raised it elsewhere or you accept file uploads through this
+> middleware, an attacker can fill memory. Pass an explicit { limit:
+> '10kb' } (or a value you've sized for the route).
+
+### CG-CFG-046 — @ts-ignore / @ts-nocheck on an auth or security-sensitive file
+- **Severity:** LOW
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> @ts-ignore on a security-critical file hides real type errors, which
+> often mask auth-bypass bugs ("user is never undefined here — but
+> actually it is"). Remove the ignore and fix the underlying typing.
+
+### CG-CFG-047 — Secret-looking file placed under a public/ or static/ directory
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> Files under public/ and static/ are served verbatim by the framework.
+> Dropping .env or a private key there publishes it to the internet.
+> Move credentials to a server-only path and ensure your CI does not
+> copy them into the build output.
+
+### CG-CFG-048 — Preflight handler reflects arbitrary Access-Control-Request-Headers
+- **Severity:** LOW
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Reflecting the request's requested headers back into Allow-Headers
+> lets an attacker widen what their XHR can send. Return an explicit
+> allowlist matching what your server actually accepts.
+
 ## SQL / NoSQL injection (9)
 
 ### CG-SQL-001 — SQL string concatenation with a variable
@@ -892,7 +965,99 @@
 > argument. Templates interpolate directly into the SQL string and
 > lose binding. Pass parameters: manager.query(`SELECT ... WHERE id=$1`, [id]).
 
-## Secrets (17)
+## Cross-site scripting (10)
+
+### CG-XSS-001 — dangerouslySetInnerHTML with a dynamic expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Passing non-literal HTML to dangerouslySetInnerHTML is XSS unless the
+> string is produced by a trusted sanitizer (for example DOMPurify).
+> Prefer rendering the content as text, or sanitize explicitly with a
+> dependency you trust and keep updated.
+
+### CG-XSS-002 — Vue v-html binding with non-literal expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> v-html renders raw HTML. If the value comes from user input or a third
+> party, this is XSS. Render as text, or sanitize with a library like
+> DOMPurify before binding.
+
+### CG-XSS-003 — element.innerHTML = dynamic_expression
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Assigning a non-literal to innerHTML parses the string as HTML. Prefer
+> textContent, or sanitize the value with a trusted library before it
+> reaches the DOM.
+
+### CG-XSS-004 — href / src set to javascript: scheme
+- **Severity:** HIGH
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> javascript: URLs execute in the origin of the rendering page. If the
+> value is ever attacker-controlled, it becomes XSS. Avoid
+> javascript: entirely; for dynamic navigation use event handlers.
+
+### CG-XSS-005 — target="_blank" anchor without rel="noopener"
+- **Severity:** LOW
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> target="_blank" without rel="noopener" (or noreferrer) lets the opened
+> page call window.opener.location, enabling tabnabbing. Always add rel
+> to external links opened in a new tab.
+
+### CG-XSS-006 — Svelte {@html …} binding with a non-literal expression
+- **Severity:** HIGH
+- **Fix strategy:** `suggest_only`
+
+> {@html x} renders the value as raw HTML. If x can reach user input,
+> it's XSS. Render as text (just {x}), or sanitize with DOMPurify first.
+
+### CG-XSS-007 — eval() / new Function() with a template literal (likely user input)
+- **Severity:** CRITICAL
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> eval/new Function on a template literal is almost always executing an
+> attacker-controlled string. Parse the input into structured data and
+> dispatch on known cases instead.
+
+### CG-XSS-008 — window.open(url) where url comes from user input
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> window.open accepts "javascript:" URLs and can open opener-controlled
+> tabs (tabnabbing). Validate the URL against a strict scheme/host
+> allowlist and pass "noopener,noreferrer" in the features argument.
+
+### CG-XSS-009 — JSX anchor href={expr} without a scheme guard
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> Rendering <a href={userInput}> can yield `javascript:` or `data:` URLs
+> if the value isn't validated. Wrap in a helper that only allows
+> explicit schemes (https, mailto, tel) and falls back to a safe
+> value.
+
+### CG-XSS-010 — marked / markdown-it used without sanitize (or with dangerous options)
+- **Severity:** MEDIUM
+- **Languages:** javascript, typescript
+- **Fix strategy:** `suggest_only`
+
+> `marked` dropped sanitize; pair it with DOMPurify on the rendered
+> HTML. `markdown-it({ html: true })` passes raw HTML through. Either
+> set html: false or sanitize the output before rendering.
+
+## Secrets (18)
 
 ### CG-SEC-001 — NEXT_PUBLIC_* env var appears to hold a secret
 - **Severity:** CRITICAL
@@ -1045,85 +1210,10 @@
 > token in the console, revoke the compromised one, and move both to
 > env vars (or Twilio's API Key feature for scoped access).
 
-## Cross-site scripting (9)
-
-### CG-XSS-001 — dangerouslySetInnerHTML with a dynamic expression
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Passing non-literal HTML to dangerouslySetInnerHTML is XSS unless the
-> string is produced by a trusted sanitizer (for example DOMPurify).
-> Prefer rendering the content as text, or sanitize explicitly with a
-> dependency you trust and keep updated.
-
-### CG-XSS-002 — Vue v-html binding with non-literal expression
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> v-html renders raw HTML. If the value comes from user input or a third
-> party, this is XSS. Render as text, or sanitize with a library like
-> DOMPurify before binding.
-
-### CG-XSS-003 — element.innerHTML = dynamic_expression
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Assigning a non-literal to innerHTML parses the string as HTML. Prefer
-> textContent, or sanitize the value with a trusted library before it
-> reaches the DOM.
-
-### CG-XSS-004 — href / src set to javascript: scheme
-- **Severity:** HIGH
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> javascript: URLs execute in the origin of the rendering page. If the
-> value is ever attacker-controlled, it becomes XSS. Avoid
-> javascript: entirely; for dynamic navigation use event handlers.
-
-### CG-XSS-005 — target="_blank" anchor without rel="noopener"
-- **Severity:** LOW
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> target="_blank" without rel="noopener" (or noreferrer) lets the opened
-> page call window.opener.location, enabling tabnabbing. Always add rel
-> to external links opened in a new tab.
-
-### CG-XSS-006 — Svelte {@html …} binding with a non-literal expression
-- **Severity:** HIGH
-- **Fix strategy:** `suggest_only`
-
-> {@html x} renders the value as raw HTML. If x can reach user input,
-> it's XSS. Render as text (just {x}), or sanitize with DOMPurify first.
-
-### CG-XSS-007 — eval() / new Function() with a template literal (likely user input)
+### CG-SEC-018 — Committed .npmrc with an inline _authToken
 - **Severity:** CRITICAL
-- **Languages:** javascript, typescript
 - **Fix strategy:** `suggest_only`
 
-> eval/new Function on a template literal is almost always executing an
-> attacker-controlled string. Parse the input into structured data and
-> dispatch on known cases instead.
-
-### CG-XSS-008 — window.open(url) where url comes from user input
-- **Severity:** MEDIUM
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> window.open accepts "javascript:" URLs and can open opener-controlled
-> tabs (tabnabbing). Validate the URL against a strict scheme/host
-> allowlist and pass "noopener,noreferrer" in the features argument.
-
-### CG-XSS-009 — JSX anchor href={expr} without a scheme guard
-- **Severity:** MEDIUM
-- **Languages:** javascript, typescript
-- **Fix strategy:** `suggest_only`
-
-> Rendering <a href={userInput}> can yield `javascript:` or `data:` URLs
-> if the value isn't validated. Wrap in a helper that only allows
-> explicit schemes (https, mailto, tel) and falls back to a safe
-> value.
+> A real npm token in .npmrc can push packages under your identity.
+> Rotate via npm's website, and replace with ${NPM_TOKEN} sourced from
+> a secret at CI/deploy time.

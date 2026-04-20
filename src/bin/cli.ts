@@ -14,6 +14,9 @@ import { summarize } from "../stats.js";
 import { runInit } from "../init.js";
 import { suppressFinding } from "../suppress.js";
 import { loadHistory, renderTrendMd } from "../history.js";
+import { color, gradeColor } from "../color.js";
+import { applyFixes } from "../apply.js";
+import { renderFindingsMd as renderFindingsMdForWrite } from "../findings-md.js";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, resolve } from "path";
@@ -22,8 +25,8 @@ import type { Finding } from "../types.js";
 
 const HELP = `claude-guard — CLI
 Usage:
-  claude-guard scan [path]           Run scan (default: cwd)
-  claude-guard scan [path] --diff=main   Scan only files changed vs the given base ref
+  claude-guard scan [path] [--json] [--diff=main]   Run scan (default: cwd); --json forces machine output on a TTY
+  claude-guard fix [path]            One-shot scan + apply_fixes in "all_safe" mode
   claude-guard list [path]           Render findings.md for latest scan
   claude-guard score [path]          Show grade/score for latest scan
   claude-guard badge [path]          Emit shields.io endpoint JSON for the latest scan
@@ -68,24 +71,74 @@ async function main(argv: string[]): Promise<number> {
     const positional = rest.filter((s) => !s.startsWith("--"));
     const diffFlag = rest.find((s) => s.startsWith("--diff="));
     const diff_base = diffFlag ? diffFlag.slice("--diff=".length) : undefined;
+    const jsonMode = rest.includes("--json");
     const projectPath = resolve(positional[0] ?? ".");
     const r = await scan(projectPath, { layers: ["l1", "l2"], diff_base });
     const card = scoreFindings(r.findings);
+    if (jsonMode || !process.stdout.isTTY) {
+      process.stdout.write(
+        JSON.stringify(
+          {
+            scan_id: r.scan_id,
+            finding_count: r.finding_count,
+            duration_ms: r.duration_ms,
+            layers_run: r.layers_run,
+            summary_by_severity: r.summary_by_severity,
+            scorecard: card,
+          },
+          null,
+          2
+        ) + "\n"
+      );
+    } else {
+      const paint = gradeColor(card.grade);
+      const label = paint(color.bold(`  ${card.grade}  `));
+      process.stdout.write(
+        `${label}  ${color.bold(`${card.score}/100`)}  ${color.dim(card.headline)}\n`
+      );
+      process.stdout.write(
+        color.dim(
+          `  scan_id=${r.scan_id.slice(0, 8)}  findings=${r.finding_count}  duration=${r.duration_ms}ms  layers=${r.layers_run.join(",")}\n`
+        )
+      );
+      const sev = r.summary_by_severity;
+      process.stdout.write(
+        `  ${color.red(`${sev.CRITICAL} CRITICAL`)}  ${color.yellow(`${sev.HIGH} HIGH`)}  ${color.cyan(`${sev.MEDIUM} MEDIUM`)}  ${color.gray(`${sev.LOW} LOW`)}\n`
+      );
+      process.stdout.write(
+        color.dim("  next: claude-guard list   # toggle [x] on fixes\n")
+      );
+    }
+    return r.summary_by_severity.CRITICAL > 0 ? 2 : 0;
+  }
+
+  if (cmd === "fix") {
+    const projectPath = resolve(rest[0] ?? ".");
+    const r = await scan(projectPath, { layers: ["l1", "l2"] });
+    if (r.finding_count === 0) {
+      process.stdout.write(color.green("No findings. Nothing to fix.\n"));
+      return 0;
+    }
+    const md = renderFindingsMdForWrite(r.scan_id, r.findings);
+    await mkdir(join(projectPath, ".claude-guard"), { recursive: true });
+    await writeFile(join(projectPath, ".claude-guard/findings.md"), md);
+    const apply = await applyFixes(projectPath, { scan_id: r.scan_id, mode: "all_safe" });
     process.stdout.write(
       JSON.stringify(
         {
           scan_id: r.scan_id,
-          finding_count: r.finding_count,
-          duration_ms: r.duration_ms,
-          layers_run: r.layers_run,
-          summary_by_severity: r.summary_by_severity,
-          scorecard: card,
+          applied: apply.applied.length,
+          suggested: apply.suggested.length,
+          skipped: apply.skipped.length,
+          failed: apply.failed.length,
+          branch: apply.branch,
+          diff_path: apply.diff_path,
         },
         null,
         2
       ) + "\n"
     );
-    return r.summary_by_severity.CRITICAL > 0 ? 2 : 0;
+    return 0;
   }
 
   if (cmd === "list") {

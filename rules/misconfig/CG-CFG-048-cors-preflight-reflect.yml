@@ -1,0 +1,15 @@
+id: CG-CFG-048
+title: "Preflight handler reflects arbitrary Access-Control-Request-Headers"
+severity: LOW
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "Access-Control-Allow-Headers[^\\n]{0,80}req\\.headers\\[?[\"']?access-control-request-headers"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Reflecting the request's requested headers back into Allow-Headers
+  lets an attacker widen what their XHR can send. Return an explicit
+  allowlist matching what your server actually accepts.
+fix_strategy: suggest_only

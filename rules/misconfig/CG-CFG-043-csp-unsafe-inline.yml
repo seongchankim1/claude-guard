@@ -1,0 +1,16 @@
+id: CG-CFG-043
+title: "Content-Security-Policy includes 'unsafe-inline' or 'unsafe-eval'"
+severity: HIGH
+category: misconfig
+patterns:
+  - regex: "Content-Security-Policy[\\s\\S]{0,400}('unsafe-inline'|'unsafe-eval'|unsafe-inline|unsafe-eval)"
+    files:
+      - "**/*.{ts,js,py,go,rb,java,php}"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - "**/nginx.conf"
+context_hint: |
+  'unsafe-inline' and 'unsafe-eval' effectively disable CSP protection
+  against XSS. Use nonces ('nonce-{random}') or hashes for any inline
+  script, and avoid eval entirely.
+fix_strategy: suggest_only

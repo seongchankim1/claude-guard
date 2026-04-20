@@ -1,0 +1,16 @@
+id: CG-LLM-014
+title: "Streaming LLM response piped to client without a per-request char cap"
+severity: LOW
+category: llm
+languages: [javascript, typescript]
+patterns:
+  - regex: "for\\s+await\\s+\\(\\s*const\\s+\\w+\\s+of\\s+[\\w\\.]+\\.stream\\s*\\("
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Streaming without a total-output cap on the server lets a malicious
+  prompt exhaust tokens and bandwidth. Track bytes written per request
+  and abort the stream after a sane cap (e.g. 32KB for chat, higher
+  for purpose-built generators).
+fix_strategy: suggest_only
