@@ -1,0 +1,14 @@
+id: CG-IAC-008
+title: "Terraform storage resource has encryption disabled"
+severity: HIGH
+category: iac
+patterns:
+  - regex: "(storage_encrypted|encrypted|server_side_encryption_configuration)\\s*=\\s*false"
+    files:
+      - "**/*.tf"
+context_hint: |
+  Disabling storage encryption (RDS storage_encrypted = false, EBS
+  encrypted = false, S3 server-side encryption missing) is a compliance
+  failure and a data-exfiltration vector. Default to enabled and use
+  a KMS key you control.
+fix_strategy: suggest_only

@@ -1,0 +1,16 @@
+id: CG-CFG-030
+title: "RegExp constructed from req.body / req.query (ReDoS risk)"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "new\\s+RegExp\\s*\\(\\s*(req|request)\\.(body|query|params)"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  Building a RegExp from attacker-supplied input enables ReDoS
+  (catastrophic backtracking) and pattern-injection. Validate the
+  pattern against a strict allowlist, or use plain string matching,
+  or run the regex on a worker with a timeout.
+fix_strategy: suggest_only

@@ -1,0 +1,16 @@
+id: CG-CFG-031
+title: "Host / X-Forwarded-Host header used to build a URL or email link"
+severity: MEDIUM
+category: misconfig
+languages: [javascript, typescript]
+patterns:
+  - regex: "req\\.headers(\\.(host|x-forwarded-host)\\b|\\[[\"'](host|x-forwarded-host)[\"']\\])"
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+context_hint: |
+  The Host header is attacker-controlled when no reverse proxy pins it.
+  Password-reset emails or redirects that embed req.headers.host can
+  therefore be used for cache poisoning or phishing. Hard-code the
+  public origin via env var (`APP_URL`) and use that instead.
+fix_strategy: suggest_only

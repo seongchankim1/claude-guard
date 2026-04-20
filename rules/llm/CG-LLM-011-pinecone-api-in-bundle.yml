@@ -1,0 +1,15 @@
+id: CG-LLM-011
+title: "Vector-DB SDK instantiated with a NEXT_PUBLIC_* API key"
+severity: CRITICAL
+category: llm
+languages: [javascript, typescript]
+patterns:
+  - regex: "new\\s+(Pinecone|Weaviate|Chroma|Qdrant)\\s*\\(\\s*\\{[^}]{0,200}apiKey\\s*:\\s*process\\.env\\.NEXT_PUBLIC_"
+    files:
+      - "**/*.{js,ts,jsx,tsx}"
+context_hint: |
+  Vector databases hold the embedded knowledge you don't want abused.
+  If the client can see the API key, any visitor can run arbitrary
+  queries against your index. Route vector-DB calls through a server
+  endpoint and keep the key server-side.
+fix_strategy: suggest_only

@@ -3,6 +3,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { readFile, writeFile, mkdir } from "fs/promises";
@@ -81,9 +83,94 @@ function text(t: string) {
 
 export function buildServer() {
   const server = new Server(
-    { name: "claude-guard", version: "0.1.0" },
-    { capabilities: { tools: {} } }
+    { name: "claude-guard", version: "1.0.0" },
+    { capabilities: { tools: {}, resources: {} } }
   );
+
+  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: [
+      {
+        uri: "claude-guard://latest/findings.md",
+        name: "claude-guard findings (markdown checklist, latest scan)",
+        mimeType: "text/markdown",
+      },
+      {
+        uri: "claude-guard://latest/findings.json",
+        name: "claude-guard findings (raw JSON, latest scan)",
+        mimeType: "application/json",
+      },
+      {
+        uri: "claude-guard://latest/scorecard.json",
+        name: "claude-guard scorecard (A+..F grade, latest scan)",
+        mimeType: "application/json",
+      },
+      {
+        uri: "claude-guard://rules/catalog.md",
+        name: "claude-guard active rule catalogue",
+        mimeType: "text/markdown",
+      },
+    ],
+  }));
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (req) => {
+    const uri = req.params.uri;
+    const cwd = process.env.CLAUDE_GUARD_PROJECT ?? process.cwd();
+    if (uri === "claude-guard://rules/catalog.md") {
+      const { renderRulesCatalogMd } = await import("./rules-catalog.js");
+      const rules = await loadBuiltinRules();
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "text/markdown",
+            text: renderRulesCatalogMd(rules),
+          },
+        ],
+      };
+    }
+    const sid = await latestScanId(cwd);
+    if (!sid) {
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "text/plain",
+            text: "No scans yet. Run the `scan` tool first.",
+          },
+        ],
+      };
+    }
+    const findings = await loadFindings(cwd, sid);
+    if (uri === "claude-guard://latest/findings.md") {
+      const md = renderFindingsMd(sid, findings);
+      return {
+        contents: [{ uri, mimeType: "text/markdown", text: md }],
+      };
+    }
+    if (uri === "claude-guard://latest/findings.json") {
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify({ scan_id: sid, findings }, null, 2),
+          },
+        ],
+      };
+    }
+    if (uri === "claude-guard://latest/scorecard.json") {
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify(scoreFindings(findings), null, 2),
+          },
+        ],
+      };
+    }
+    throw new Error(`Unknown resource URI: ${uri}`);
+  });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [

@@ -1,0 +1,14 @@
+id: CG-XSS-008
+title: "window.open(url) where url comes from user input"
+severity: MEDIUM
+category: xss
+languages: [javascript, typescript]
+patterns:
+  - regex: "window\\.open\\s*\\(\\s*[a-zA-Z_][a-zA-Z0-9_\\.]*\\s*[,)]"
+    files:
+      - "**/*.{js,ts,jsx,tsx}"
+context_hint: |
+  window.open accepts "javascript:" URLs and can open opener-controlled
+  tabs (tabnabbing). Validate the URL against a strict scheme/host
+  allowlist and pass "noopener,noreferrer" in the features argument.
+fix_strategy: suggest_only

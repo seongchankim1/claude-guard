@@ -7,7 +7,7 @@
 ![mcp](https://img.shields.io/badge/MCP-stdio-purple)
 
 - One-line install. **Zero API keys. Zero network calls by default. Zero outbound telemetry.**
-- **90 builtin rules** across secrets, SQL/NoSQL injection, XSS, auth, LLM-specific risks, misconfiguration, Docker, and IaC. Detects across **10 languages** via an optional Semgrep adapter.
+- **100 builtin rules** across secrets, SQL/NoSQL injection, XSS, auth, LLM-specific risks, misconfiguration, Docker, and IaC. Detects across **10 languages** via an optional Semgrep adapter.
 - **SARIF 2.1.0 export** — drop findings straight into the GitHub Security tab via `github/codeql-action/upload-sarif`.
 - **Security scorecard.** Every scan produces a 0–100 score and an A+…F grade, rendered at the top of `findings.md` and available as its own MCP tool, CLI command, and shields.io-compatible endpoint badge.
 - **Checkbox-based approval.** `claude-guard` writes a `findings.md` grouped by severity. You toggle `[x]` on the items you want fixed, then run `apply_fixes`. Nothing else is touched.
@@ -113,7 +113,7 @@ In any MCP client, in plain language:
 
 ## Builtin rules
 
-**90 rules** across eight categories, targeting the failure modes we see most often in AI-generated web code:
+**100 rules** across eight categories, targeting the failure modes we see most often in AI-generated web code:
 
 | category | count | example rules |
 |---|---|---|

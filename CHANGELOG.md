@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.1.0 — 2026-04-20
+
+### Added
+- **MCP resources**. The server now exposes:
+  - `claude-guard://latest/findings.md` — the checkbox markdown for the latest scan
+  - `claude-guard://latest/findings.json` — the raw findings
+  - `claude-guard://latest/scorecard.json` — grade, score, deductions
+  - `claude-guard://rules/catalog.md` — full catalogue of active rules
+  MCP clients that render resources (e.g. Claude Desktop) now show findings inline without re-invoking `scan`. Set `CLAUDE_GUARD_PROJECT` to pin the active project when the MCP stdio session's cwd is not the right one.
+- **+10 rules**, bringing the total to 100:
+  - `CG-SEC-015` — Google / Firebase `AIza…` key in source
+  - `CG-AUTH-015` — signup taking `role` / `isAdmin` from `req.body`
+  - `CG-CFG-030` — `RegExp` constructed from request input (ReDoS)
+  - `CG-CFG-031` — `Host` / `X-Forwarded-Host` used to build URLs or email links
+  - `CG-CFG-032` — CORS reflecting `req.headers.origin` while credentials are enabled
+  - `CG-CFG-033` — archive extract without zip-slip base-path check
+  - `CG-LLM-011` — vector DB SDK (Pinecone/Weaviate/Chroma/Qdrant) with a `NEXT_PUBLIC_*` key
+  - `CG-XSS-008` — `window.open(var)` with an identifier target
+  - `CG-IAC-008` — Terraform storage/encryption disabled
+  - `CG-SQL-008` — Sequelize `query()` with template-literal interpolation
+
 ## 1.0.0 — 2026-04-20
 
 First stable release. Over nine iterations claude-guard has grown from a 10-rule MVP into a full audit tool with 90 rules across eight categories, four AST-based auto-fixes, SARIF/JUnit/HTML export, community plugin loading, a baseline system, and first-class CI integration.

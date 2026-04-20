@@ -1,0 +1,19 @@
+id: CG-CFG-033
+title: "Archive extracted without a zip-slip base-path check"
+severity: HIGH
+category: misconfig
+languages: [javascript, typescript, python]
+patterns:
+  - regex: "(tar-stream|tar|unzipper|adm-zip)\\.[\\w]*[Ee]xtract[\\w]*\\("
+    files:
+      - "**/*.ts"
+      - "**/*.js"
+  - regex: "zipfile\\.ZipFile\\([^)]+\\)\\.extractall\\("
+    files:
+      - "**/*.py"
+context_hint: |
+  Archive libraries happily write files to absolute or parent-directory
+  paths baked into the archive, which is the classic zip-slip RCE. For
+  each entry, resolve the join(base, entry.path) and reject if it
+  does not start with base + sep.
+fix_strategy: suggest_only
