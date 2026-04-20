@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.0 — 2026-04-20 — Major release
+
+claude-guard 2.0.0 marks 20 iterations and ~200 commits of continuous work. The project is production-grade: 155 rules, 5 AST auto-fixes, 10 MCP tools + 4 resources, SARIF / JUnit / HTML / CSV / shields.io exports, full GitHub Actions wiring, a community plugin template, and a 22-finding demo app.
+
+### Added
+- **MCP SDK integration test** (`tests/mcp.integration.test.ts`) uses `InMemoryTransport` to stand up the real MCP server and drive it from a real SDK client. Confirms every tool is callable and every resource is reachable end-to-end. **111 tests across 30 test files.**
+
+### Stability
+- No breaking changes from 1.x. The semver bump marks the end of the rapid-iteration phase and the start of semver-stable maintenance.
+
 ## 1.8.0 — 2026-04-20
 
 ### Added
