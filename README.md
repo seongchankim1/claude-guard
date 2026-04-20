@@ -2,7 +2,9 @@
 
 **English** · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md)
 
-> Audit AI-generated code the way real attackers would — then fix only what you check.
+### A shield for vibe coders.
+
+AI writes code fast. **claude-guard** finds the security gaps it leaves behind — and helps you close them before anyone else does.
 
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](package.json)
@@ -14,34 +16,33 @@
 claude mcp add claude-guard -- npx -y claude-guard-mcp
 ```
 
-Zero API keys. Zero network calls by default. Zero outbound telemetry.
+No API keys. No network calls by default. No outbound telemetry.
 
-## What it is
+## What it does
 
-claude-guard is an MCP server. It scans your repo for the security mistakes AI-assisted code most often ships with — hardcoded `NEXT_PUBLIC_*` secrets, Prisma `$queryRawUnsafe`, Supabase `service_role` in client code, CORS `"*"`, and so on — grades the result, and walks you through **only the fixes you tick**.
+claude-guard is the MCP server that watches your back while you vibe-code. It walks through your repo, catches the mistakes attackers love — a forgotten `NEXT_PUBLIC_OPENAI_KEY` in `.env`, a `$queryRawUnsafe` wired straight to `req.query`, a stray Supabase `service_role` that slipped into the client bundle — puts a grade on the result, and fixes **only the items you tick**.
 
 ## Demo
 
 ```console
 $ npx claude-guard scan ./examples/vulnerable-next-app
 
-  F   0/100   Grade F — score 0/100 (11 CRITICAL, 7 HIGH, 2 MEDIUM, 2 LOW)
-  scan_id=747d5448  findings=22  duration=76ms  layers=l1,l2
-  11 CRITICAL   7 HIGH   2 MEDIUM   2 LOW
-  next: claude-guard list   # toggle [x] on fixes
+  F   0/100   Grade F — 22 findings (11 CRITICAL, 7 HIGH, 2 MEDIUM, 2 LOW)
+  scan_id=747d5448  duration=76ms  layers=l1,l2
+  next: claude-guard list
 ```
 
-Open `.claude-guard/findings.md`, tick `[x]` on what you want fixed, then `claude-guard fix` or `apply_fixes` through MCP. Changes land on a `claude-guard/fix-<id>` branch, staged but not committed.
+Open `.claude-guard/findings.md`, tick `[x]` on whatever you want fixed, run `claude-guard fix`. The changes land on a `claude-guard/fix-<id>` branch, staged but not committed — you still own the commit.
 
-## Features
+## What's inside
 
-- **155 rules** across secrets · SQL / NoSQL · XSS · auth · LLM-specific · misconfig · Docker · IaC
-- **5 AST auto-fixes** (`ts-morph`) — everything else is an annotated TODO, never a silent rewrite
-- **Checkbox-approved fixes** with a git branch + rollback patch
-- **Exports** — JSON · markdown · HTML · SARIF 2.1.0 · JUnit XML · CSV · shields.io badge
-- **Four suppression layers** — inline comment, `ignore.yml`, `severity_overrides`, `baseline`
-- **Opt-in red-team probe** — loopback only, with DNS-rebinding defense + rate limit
-- **MCP native** — 10 tools + 4 resources; works in Claude Code / Desktop / any MCP client
+- **155 rules** across secrets, SQL / NoSQL, XSS, auth, LLM-specific risks, misconfig, Docker, and IaC
+- **5 AST-based auto-fixes** via `ts-morph`. Everything else becomes an annotated TODO — never a silent rewrite.
+- **Checkbox-approved fixes** on a dedicated branch, always with a rollback patch
+- **Exports**: JSON, Markdown, HTML, SARIF 2.1.0, JUnit XML, CSV, shields.io badge
+- **Four ways to silence noise**: inline comment, `ignore.yml`, `severity_overrides`, `baseline`
+- **Opt-in red-team probe** — loopback only, DNS-rebinding defense, per-finding rate limit
+- **MCP native** — 10 tools + 4 resources. Works in Claude Code / Desktop / any MCP client.
 
 ## Install
 
@@ -51,7 +52,7 @@ Open `.claude-guard/findings.md`, tick `[x]` on what you want fixed, then `claud
 claude mcp add claude-guard -- npx -y claude-guard-mcp
 ```
 
-Or for Claude Desktop, in `claude_desktop_config.json`:
+For Claude Desktop, in `claude_desktop_config.json`:
 
 ```json
 { "mcpServers": { "claude-guard": { "command": "npx", "args": ["-y", "claude-guard-mcp"] } } }
@@ -60,16 +61,16 @@ Or for Claude Desktop, in `claude_desktop_config.json`:
 **As a CLI:**
 
 ```bash
-npx claude-guard scan .           # scan cwd (exits 2 on CRITICAL)
-npx claude-guard fix .            # scan + apply all safe fixes
-npx claude-guard report --open    # standalone HTML in browser
-npx claude-guard sarif . > out.sarif      # for GitHub Code Scanning
-npx claude-guard install-hooks    # pre-commit hook blocking CRITICALs
+npx claude-guard scan .              # scan cwd (exits 2 on CRITICAL — perfect for CI)
+npx claude-guard fix .               # scan, then apply every safe fix
+npx claude-guard report --open       # standalone HTML report in your browser
+npx claude-guard sarif . > out.sarif # for GitHub Code Scanning
+npx claude-guard install-hooks       # pre-commit hook that blocks CRITICALs
 ```
 
-Full CLI: `npx claude-guard --help`.
+Full command list: `npx claude-guard --help`.
 
-## GitHub Code Scanning
+## Drop into GitHub Code Scanning
 
 ```yaml
 # .github/workflows/claude-guard.yml
@@ -89,16 +90,18 @@ jobs:
         with: { sarif_file: claude-guard.sarif, category: claude-guard }
 ```
 
-## How it keeps things safe
+Findings show up under your repo's **Security** tab.
 
-Short version:
+## How it earns your trust
 
-- Default mode makes **zero network calls** and calls **zero LLMs**.
-- Rules are **YAML only**, validated by JSON Schema + `safe-regex2` (ReDoS guard) at load time.
-- Red-team mode is opt-in, loopback-only, enforced by string check **and** DNS re-resolution.
-- Fixes never commit on your behalf and always write a rollback patch.
+The short list:
 
-Full model: **[`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md)**.
+- Default mode makes **zero network calls** and never talks to an LLM.
+- Rules are **YAML only** — no code execution path from a rule file. JSON Schema + `safe-regex2` (ReDoS guard) validate every regex at load time.
+- Red-team mode is off by default. When turned on, it only hits loopback — enforced by string check **and** DNS re-resolution.
+- Fixes never commit for you. Every fix batch writes a rollback patch.
+
+Full story: **[`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md)**.
 
 ## Rules
 
@@ -113,9 +116,9 @@ Full model: **[`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md)**.
 | docker | 2 |
 | iac | 12 |
 
-Full catalogue: **[`docs/rules.md`](docs/rules.md)** (regenerate with `claude-guard docs`).
+Full catalogue: **[`docs/rules.md`](docs/rules.md)** (regenerate any time with `claude-guard docs`).
 
-## Comparison
+## How it compares
 
 | | claude-guard | Semgrep | Gitleaks | Snyk Code | SonarQube |
 |---|---|---|---|---|---|
@@ -130,16 +133,20 @@ Run claude-guard **alongside** the general-purpose tools, not instead of them.
 
 ## FAQ
 
-**Does it send my code anywhere?** No. Zero network calls, zero telemetry, no LLM API key required.
+**Does it send my code anywhere?**
+No. Zero network calls, no telemetry, no LLM API key required.
 
-**Does it execute code from rule files?** No. YAML only. Every regex is ReDoS-screened at load.
+**Does it execute code from rule files?**
+No. Rules are YAML; every regex is ReDoS-screened at load time.
 
-**Why checkbox UX instead of full auto-fix?** A wrong auto-fix on a false positive turns a detection error into a functional regression. `apply_fixes --mode=all_safe` is still there when you trust the set.
+**Why checkbox UX instead of full auto-fix?**
+A wrong auto-fix on a false positive turns a detection mistake into a functional regression. When you do trust the rule set, `apply_fixes --mode=all_safe` still applies everything in one go.
 
-**Does it replace Snyk / Semgrep / Sonar?** No — run it alongside. Its niche is "the 150 things Claude-assisted code gets wrong most often, each with a fix wired up."
+**Does it replace Snyk / Semgrep / Sonar?**
+No — run it alongside. Its niche is the 150 things Claude-assisted code gets wrong most often, each with a fix already wired up.
 
 More answers: [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md).
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE). Disclosure: [`SECURITY.md`](SECURITY.md).
+MIT — see [`LICENSE`](LICENSE). Vulnerability disclosure: [`SECURITY.md`](SECURITY.md).
