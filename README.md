@@ -1,5 +1,7 @@
 # claude-guard
 
+**English** · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md)
+
 **An MCP server that audits AI-generated code the way real attackers would — then fixes only what you check.**
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
